@@ -1,4 +1,4 @@
-import { TILE_HEIGHT, TILE_WIDTH, getDepth, getScreenBounds, projectToScreen } from './isoProjection';
+import { TILE_HEIGHT, TILE_WIDTH, getDepth, getRectCenter, getRectCorners, getScreenBounds, projectToScreen, raise } from './isoProjection';
 
 describe('projectToScreen', () => {
   it('puts the grid origin at the screen origin', () => {
@@ -28,5 +28,23 @@ describe('getScreenBounds', () => {
 describe('getDepth', () => {
   it('grows toward the viewer', () => {
     expect(getDepth({ gx: 3, gy: 4 })).toBeGreaterThan(getDepth({ gx: 1, gy: 1 }));
+  });
+});
+
+describe('rect helpers', () => {
+  const rect = { gx0: 2, gy0: 4, gx1: 6, gy1: 10 };
+
+  it('lists corners clockwise from the top-left', () => {
+    expect(getRectCorners(rect)).toEqual([
+      { gx: 2, gy: 4 },
+      { gx: 6, gy: 4 },
+      { gx: 6, gy: 10 },
+      { gx: 2, gy: 10 },
+    ]);
+  });
+
+  it('finds the center and raises points straight up on screen', () => {
+    expect(getRectCenter(rect)).toEqual({ gx: 4, gy: 7 });
+    expect(raise({ x: 5, y: 9 }, 4)).toEqual({ x: 5, y: 5 });
   });
 });

@@ -6,6 +6,7 @@
   --muted: #8a7fb3;
   --accent: #ffd866;
   --navbar-h: 48px;
+  --traffic-lights-width: 80px;
 }
 
 * {
@@ -35,16 +36,25 @@ body,
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px 0 88px; /* room for macOS traffic lights */
+  padding: 0 16px;
+  gap: 8px;
+  min-width: 0;
   background: var(--panel);
   border-bottom: 2px solid var(--border);
   -webkit-app-region: drag;
+}
+
+/* macOS draws its traffic lights over the navbar; leave them room only there. */
+body[data-platform='darwin'] .navbar {
+  padding-left: calc(var(--traffic-lights-width) + 8px);
 }
 
 .navbar__brand {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .navbar__logo {
@@ -57,13 +67,18 @@ body,
   letter-spacing: 0.08em;
   text-transform: uppercase;
   font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .navbar__actions {
   display: flex;
   gap: 8px;
+  flex-shrink: 0;
   -webkit-app-region: no-drag;
 }
+
 
 .ds-button {
   font: inherit;
@@ -99,4 +114,34 @@ body,
   background: var(--accent);
   color: var(--bg);
   border-color: var(--accent);
+}
+
+.ds-button__icon {
+  display: none;
+}
+
+/* Narrow windows: icon-only buttons, no title text. */
+@media (max-width: 560px) {
+  .navbar__title {
+    display: none;
+  }
+
+  .ds-button__label {
+    display: none;
+  }
+
+  .ds-button__icon {
+    display: inline;
+  }
+
+  .ds-button {
+    min-width: 32px;
+    padding: 6px 8px;
+  }
+}
+
+@media (max-width: 360px) {
+  .navbar {
+    padding-right: 8px;
+  }
 }

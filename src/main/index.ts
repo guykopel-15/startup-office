@@ -16,12 +16,12 @@ import {
 } from './windowConfig';
 
 const logger = createLogger('main');
-const config = readConfig();
+const config = readConfig(app.isPackaged);
 
 function createWindow(): BrowserWindow {
   const mainWindow = new BrowserWindow({
-    width: WINDOW_DEFAULT_WIDTH,
-    height: WINDOW_DEFAULT_HEIGHT,
+    width: config.windowSize?.width ?? WINDOW_DEFAULT_WIDTH,
+    height: config.windowSize?.height ?? WINDOW_DEFAULT_HEIGHT,
     minWidth: WINDOW_MIN_WIDTH,
     minHeight: WINDOW_MIN_HEIGHT,
     title: WINDOW_TITLE,

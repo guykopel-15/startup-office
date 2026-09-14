@@ -6,7 +6,10 @@ export enum DSButtonVariant {
 }
 
 interface DSButtonProps {
-  children: React.ReactNode;
+  /** Text label; hidden on narrow windows when `icon` is given. */
+  children: string;
+  /** Short glyph shown instead of the label on narrow windows. */
+  icon?: string;
   onClick?: () => void;
   isDisabled?: boolean;
   variant?: DSButtonVariant;
@@ -19,6 +22,7 @@ export function DSButton({
   isDisabled = false,
   variant = DSButtonVariant.Default,
   title,
+  icon,
 }: DSButtonProps): React.JSX.Element {
   const handleClick = (): void => {
     if (isDisabled) return;
@@ -32,8 +36,14 @@ export function DSButton({
       onClick={handleClick}
       disabled={isDisabled}
       title={title}
+      aria-label={children}
     >
-      {children}
+      {icon !== undefined && (
+        <span className="ds-button__icon" aria-hidden="true">
+          {icon}
+        </span>
+      )}
+      <span className={icon === undefined ? undefined : 'ds-button__label'}>{children}</span>
     </button>
   );
 }
