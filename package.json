@@ -1,6 +1,6 @@
 {
   "name": "startup-office",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "MapleStory-style desktop game where every employee is a real Claude Code agent",
   "directories": {
     "doc": "docs"
@@ -12,7 +12,8 @@
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit",
     "package": "electron-vite build && electron-builder --mac",
-    "icon": "node scripts/generateIcon.mts"
+    "icon": "node scripts/generateIcon.mts",
+    "screenshot-scripts": "node scripts/screenshots/writeScreenshotScripts.mts"
   },
   "repository": {
     "type": "git",
@@ -34,6 +35,7 @@
   "devDependencies": {
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7",
     "@types/node": "^26.5.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",

@@ -101,6 +101,180 @@ body[data-platform='darwin'] .navbar {
   cursor: not-allowed;
 }
 
+.ds-input {
+  font: inherit;
+  font-size: 12px;
+  width: 100%;
+  padding: 6px 8px;
+  color: var(--text);
+  background: var(--bg);
+  border: 2px solid var(--border);
+  border-radius: 4px;
+}
+
+.ds-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.ds-textarea {
+  resize: vertical;
+  min-height: 56px;
+}
+
+.ds-select {
+  appearance: none;
+  cursor: pointer;
+  padding-right: 28px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238a7fb3' stroke-width='2'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+
+.ds-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ds-field__label {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.ds-field__error {
+  font-size: 11px;
+  color: #ff8a8a;
+}
+
+.ds-color {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.ds-color__input {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 2px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  cursor: pointer;
+}
+
+.ds-modal__backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: rgba(14, 10, 26, 0.7);
+  z-index: 10;
+  -webkit-app-region: no-drag;
+}
+
+.ds-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(560px, 100%);
+  max-height: 100%;
+  background: var(--panel);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  outline: none;
+}
+
+.ds-modal__header,
+.ds-modal__footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  flex-shrink: 0;
+}
+
+.ds-modal__header {
+  justify-content: space-between;
+  border-bottom: 2px solid var(--border);
+}
+
+.ds-modal__footer {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  border-top: 2px solid var(--border);
+}
+
+.ds-modal__title {
+  margin: 0;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ds-modal__body {
+  padding: 16px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.add-figure {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.add-figure__preview {
+  display: flex;
+  justify-content: center;
+  padding: 8px;
+  background: var(--bg);
+  border: 2px solid var(--border);
+  border-radius: 6px;
+}
+
+.figure-preview {
+  image-rendering: pixelated;
+  display: block;
+}
+
+.add-figure__fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  min-width: 0;
+}
+
+.add-figure__colors {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+}
+
+.add-figure__fields > .ds-field:last-child {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 420px) {
+  .add-figure {
+    grid-template-columns: 1fr;
+  }
+
+  .add-figure__preview {
+    justify-self: center;
+  }
+}
+
 .game-canvas {
   flex: 1;
   min-height: 0;

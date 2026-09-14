@@ -59,7 +59,7 @@ function handleAllWindowsClosed(): void {
 
 async function handleScreenshotRequest(mainWindow: BrowserWindow, outputPath: string): Promise<void> {
   try {
-    await captureWindowToFile(mainWindow, outputPath);
+    await captureWindowToFile(mainWindow, outputPath, config.screenshotScriptPath);
   } catch (error: unknown) {
     logger.error('screenshot failed', error);
   }

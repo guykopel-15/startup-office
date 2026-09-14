@@ -66,6 +66,8 @@ export class FigureSprite {
     this.sprite.removeAllListeners();
     this.sprite.destroy();
     this.tag.destroy();
+    this.scene.textures.remove(this.idleKey);
+    this.scene.textures.remove(this.blinkKey);
   }
 
   private ensureTextures(): void {
