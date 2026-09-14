@@ -1,6 +1,6 @@
 {
   "name": "startup-office",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "MapleStory-style desktop game where every employee is a real Claude Code agent",
   "directories": {
     "doc": "docs"
@@ -27,6 +27,7 @@
   },
   "homepage": "https://github.com/guykopel-15/startup-office#readme",
   "dependencies": {
+    "@tanstack/react-query": "^5.102.8",
     "phaser": "^3.90.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
