@@ -42,7 +42,7 @@ Verify compliance before every commit.
 
 - Controller pattern — IPC handlers handle request/response only, logic goes in services (`src/main/services/`)
 - Validate IPC input with DTOs before it reaches the handler
-- Standard response formats — `successResponse()` for success, one error handler for failures
+- Standard response formats — `successResponse()` / `errorResponse()` from `src/shared/response.ts`; services throw `ServiceError` with a stable code and the controller maps it with one error handler
 - Environment variables through config only — never read `process.env` directly outside `src/main/config.ts`
 
 ## Security
@@ -60,7 +60,7 @@ Verify compliance before every commit.
 
 - Components under 150 lines — split into smaller components if bigger
 - Custom hooks for IPC/async calls — handle loading, error, and data in one place
-- TanStack Query for all data that comes from the main process
+- TanStack Query for all data that comes from the main process; the hooks live in `src/renderer/src/api/`
 - Context for global session state only, `useState` for local UI state
 - Game state shared by React and Phaser lives in the Zustand store under `src/renderer/src/store/`; Phaser subscribes to it and never owns it
 - All UI components come from the design kit (`src/renderer/src/designKit/`). Every component has a `DS` prefix. If a component doesn't exist, create it there first. No raw HTML controls (`button`, `input`, `select`) used directly in pages or panels

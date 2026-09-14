@@ -15,9 +15,12 @@ const TITLE = 'Load repo';
 const SUBMIT_LABEL = 'Clone';
 const CLONING_LABEL = 'Cloning…';
 const CANCEL_LABEL = 'Cancel';
+const URL_LABEL = 'GitHub URL';
+export const URL_FIELD_ID = 'repo-url';
 const URL_PLACEHOLDER = 'https://github.com/owner/repo';
 const INVALID_URL = 'Paste a GitHub repository URL like https://github.com/owner/repo';
-const HELP_TEXT = 'The office clones the repository into its data folder. Every figure then reads the part that matches its job.';
+const HELP_TEXT = 'The office clones the repository into its data folder so the figures can work on it.';
+const ENTER_KEY = 'Enter';
 
 /** Paste a GitHub URL; main clones it and the status chip in the navbar follows along. */
 export function LoadRepoDialog({ isOpen, onClose }: LoadRepoDialogProps): React.JSX.Element {
@@ -33,9 +36,20 @@ export function LoadRepoDialog({ isOpen, onClose }: LoadRepoDialogProps): React.
   };
 
   const handleSubmit = (): void => {
+    if (loadRepo.isPending) return;
     if (parseGitHubUrl(url) === null) return setValidationError(INVALID_URL);
     setValidationError(undefined);
     loadRepo.mutate(url, { onSuccess: handleClose });
+  };
+
+  const handleUrlChange = (value: string): void => {
+    setUrl(value);
+    setValidationError(undefined);
+    if (loadRepo.isError) loadRepo.reset();
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>): void => {
+    if (event.key === ENTER_KEY) handleSubmit();
   };
 
   const error = validationError ?? loadRepo.error?.message;
@@ -51,8 +65,8 @@ export function LoadRepoDialog({ isOpen, onClose }: LoadRepoDialogProps): React.
   return (
     <DSModal title={TITLE} isOpen={isOpen} onClose={handleClose} footer={footer}>
       <p className="dialog-help">{HELP_TEXT}</p>
-      <DSField label="GitHub URL" htmlFor="repo-url" error={error}>
-        {(control: DSFieldControlProps): React.ReactNode => <DSInput {...control} value={url} onChange={setUrl} placeholder={URL_PLACEHOLDER} />}
+      <DSField label={URL_LABEL} htmlFor={URL_FIELD_ID} error={error}>
+        {(control: DSFieldControlProps): React.ReactNode => <DSInput {...control} value={url} onChange={handleUrlChange} onKeyDown={handleKeyDown} placeholder={URL_PLACEHOLDER} />}
       </DSField>
     </DSModal>
   );

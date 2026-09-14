@@ -1,54 +1,26 @@
-import { spawn } from 'node:child_process';
-import { access, mkdir } from 'node:fs/promises';
+import { access, mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { createLogger } from '../../shared/logger';
 import { IDLE_REPO_STATUS, RepoErrorCode, RepoState, parseGitHubUrl } from '../../shared/repo';
 import { ServiceError } from '../../shared/response';
+import { runGit } from './gitRunner';
 
 import type { GitHubRepoRef, RepoStatus } from '../../shared/repo';
+import type { GitRunner } from './gitRunner';
 
 export type StatusListener = (status: RepoStatus) => void;
 
-/** Runs a git command; injected so tests never touch the real binary. */
-export type GitRunner = (args: readonly string[], cwd: string | undefined, onOutputLine: (line: string) => void) => Promise<void>;
-
 const logger = createLogger('repo');
-const GIT_BINARY = 'git';
-const CLONE_DEPTH = '1';
 const REPOS_DIRECTORY = 'repos';
+const GIT_DIRECTORY = '.git';
 const OWNER_NAME_SEPARATOR = '__';
-const ENOENT = 'ENOENT';
-const LINE_SPLIT = /\r?\n|\r/;
+const CLONE_DEPTH = '1';
+const GIT_PULL_ARGUMENTS: readonly string[] = ['pull', '--ff-only'];
+const GIT_CLONE_ARGUMENTS: readonly string[] = ['clone', '--depth', CLONE_DEPTH, '--progress'];
 const MAX_MESSAGE_LENGTH = 200;
 const INVALID_URL_MESSAGE = 'Paste a GitHub repository URL like https://github.com/owner/repo';
-const GIT_NOT_FOUND_MESSAGE = 'git is not installed or not on PATH';
 const BUSY_MESSAGE = 'A repository is already being cloned';
-
-/** Spawns git without a shell; every output line is forwarded as progress. */
-export const runGit: GitRunner = (args, cwd, onOutputLine): Promise<void> =>
-  new Promise<void>((resolve: () => void, reject: (error: Error) => void): void => {
-    const child = spawn(GIT_BINARY, [...args], { cwd, stdio: ['ignore', 'pipe', 'pipe'] });
-    let lastLines = '';
-    const handleData = (chunk: Buffer): void => {
-      const text = chunk.toString();
-      lastLines = `${lastLines}${text}`.slice(-MAX_MESSAGE_LENGTH * 2);
-      text
-        .split(LINE_SPLIT)
-        .filter((line: string): boolean => line.trim().length > 0)
-        .forEach(onOutputLine);
-    };
-    child.stdout?.on('data', handleData);
-    child.stderr?.on('data', handleData);
-    child.on('error', (error: NodeJS.ErrnoException): void => {
-      if (error.code === ENOENT) return reject(new ServiceError(RepoErrorCode.GitNotFound, GIT_NOT_FOUND_MESSAGE));
-      reject(new ServiceError(RepoErrorCode.CloneFailed, error.message));
-    });
-    child.on('close', (code: number | null): void => {
-      if (code === 0) return resolve();
-      reject(new ServiceError(RepoErrorCode.CloneFailed, lastLines.trim().slice(-MAX_MESSAGE_LENGTH) || `git exited with code ${String(code)}`));
-    });
-  });
 
 async function directoryExists(path: string): Promise<boolean> {
   try {
@@ -84,16 +56,16 @@ export class RepoService {
 
   /** Clones `url`, or refreshes it when the clone already exists. Throws a ServiceError on failure. */
   async load(url: string): Promise<RepoStatus> {
-    const ref = parseGitHubUrl(url);
-    if (ref === null) throw new ServiceError(RepoErrorCode.InvalidUrl, INVALID_URL_MESSAGE);
+    const repoRef = parseGitHubUrl(url);
+    if (repoRef === null) throw new ServiceError(RepoErrorCode.InvalidUrl, INVALID_URL_MESSAGE);
     if (this.status.state === RepoState.Cloning) throw new ServiceError(RepoErrorCode.Busy, BUSY_MESSAGE);
-    const path = this.clonePathFor(ref);
-    this.publish({ state: RepoState.Cloning, url: ref.cloneUrl, fullName: `${ref.owner}/${ref.name}`, path: null, message: null });
+    const path = this.clonePathFor(repoRef);
+    this.publish({ state: RepoState.Cloning, url: repoRef.cloneUrl, fullName: `${repoRef.owner}/${repoRef.name}`, path: null, message: null });
     try {
-      await this.cloneOrRefresh(ref, path);
+      await this.cloneOrRefresh(repoRef, path);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
-      logger.error('repo load failed', { url: ref.cloneUrl, message });
+      logger.error('repo load failed', { url: repoRef.cloneUrl, message });
       this.publish({ ...this.status, state: RepoState.Error, message });
       throw error;
     }
@@ -101,22 +73,44 @@ export class RepoService {
     return this.status;
   }
 
-  private clonePathFor(ref: GitHubRepoRef): string {
-    return join(this.reposRoot, `${ref.owner}${OWNER_NAME_SEPARATOR}${ref.name}`);
+  private clonePathFor(repoRef: GitHubRepoRef): string {
+    return join(this.reposRoot, `${repoRef.owner}${OWNER_NAME_SEPARATOR}${repoRef.name}`);
   }
 
-  private async cloneOrRefresh(ref: GitHubRepoRef, path: string): Promise<void> {
+  /** Pulls an existing clone; when the pull fails or nothing is there, clones fresh. */
+  private async cloneOrRefresh(repoRef: GitHubRepoRef, path: string): Promise<void> {
     await mkdir(this.reposRoot, { recursive: true });
-    const handleLine = (line: string): void => this.publish({ ...this.status, message: line.slice(0, MAX_MESSAGE_LENGTH) });
-    if (await directoryExists(join(path, '.git'))) {
-      await this.git(['pull', '--ff-only'], path, handleLine);
-      return;
+    if (await directoryExists(join(path, GIT_DIRECTORY))) {
+      try {
+        await this.git(GIT_PULL_ARGUMENTS, path, this.handleOutputLine);
+        return;
+      } catch (error: unknown) {
+        logger.warn('pull failed, cloning fresh', { path, error });
+      }
     }
-    await this.git(['clone', '--depth', CLONE_DEPTH, '--progress', ref.cloneUrl, path], undefined, handleLine);
+    await rm(path, { recursive: true, force: true });
+    try {
+      await this.git([...GIT_CLONE_ARGUMENTS, repoRef.cloneUrl, path], undefined, this.handleOutputLine);
+    } catch (error: unknown) {
+      await rm(path, { recursive: true, force: true });
+      throw error;
+    }
   }
+
+  private readonly handleOutputLine = (line: string): void => {
+    const message = line.slice(0, MAX_MESSAGE_LENGTH);
+    if (message === this.status.message) return;
+    this.publish({ ...this.status, message });
+  };
 
   private publish(status: RepoStatus): void {
     this.status = status;
-    this.listeners.forEach((listener: StatusListener): void => listener(status));
+    this.listeners.forEach((listener: StatusListener): void => {
+      try {
+        listener(status);
+      } catch (error: unknown) {
+        logger.error('status listener failed', error);
+      }
+    });
   }
 }

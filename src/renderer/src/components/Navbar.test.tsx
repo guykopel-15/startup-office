@@ -2,12 +2,16 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { vi } from 'vitest';
 
+import { IDLE_REPO_STATUS } from '@shared/repo';
 import { Navbar } from './Navbar';
 
 import type React from 'react';
 
-function renderNavbar(onAddFigure = vi.fn(), onLoadRepo = vi.fn()): void {
-  window.office = { version: 'test', platform: 'darwin', repo: { load: vi.fn(), getStatus: vi.fn().mockResolvedValue({ ok: true, data: { state: 'idle', url: null, fullName: null, path: null, message: null } }), onStatus: vi.fn().mockReturnValue((): void => undefined) } };
+const TEST_VERSION = 'test';
+const TEST_PLATFORM = 'darwin';
+
+function renderNavbar(onAddFigure: () => void = vi.fn(), onLoadRepo: () => void = vi.fn()): void {
+  window.office = { version: TEST_VERSION, platform: TEST_PLATFORM, repo: { load: vi.fn(), getStatus: vi.fn().mockResolvedValue({ isOk: true, data: IDLE_REPO_STATUS }), onStatus: vi.fn().mockReturnValue((): void => undefined) } };
   const client = new QueryClient();
   const tree: React.ReactNode = (
     <QueryClientProvider client={client}>

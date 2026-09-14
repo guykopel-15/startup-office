@@ -3,6 +3,7 @@ import { BrowserWindow, ipcMain } from 'electron';
 import { RepoChannel, RepoErrorCode } from '../../shared/repo';
 import { ServiceError, errorResponse, successResponse } from '../../shared/response';
 
+import type { IpcMainInvokeEvent } from 'electron';
 import type { RepoStatus } from '../../shared/repo';
 import type { ApiResponse } from '../../shared/response';
 import type { RepoService } from '../services/repoService';
@@ -10,6 +11,11 @@ import type { RepoService } from '../services/repoService';
 /** The payload the renderer sends to `repo:load`. */
 export interface LoadRepoDto {
   url: string;
+}
+
+/** The subset of ipcMain the controller needs; injected so tests can capture handlers. */
+export interface IpcRegistrar {
+  handle: (channel: string, listener: (event: IpcMainInvokeEvent, payload: unknown) => unknown) => void;
 }
 
 const UNKNOWN_ERROR_CODE = 'UNKNOWN';
@@ -30,20 +36,24 @@ export function toErrorResponse(error: unknown): ApiResponse<never> {
 }
 
 function broadcast(status: RepoStatus): void {
-  BrowserWindow.getAllWindows().forEach((window: BrowserWindow): void => window.webContents.send(RepoChannel.StatusChanged, status));
+  BrowserWindow.getAllWindows()
+    .filter((window: BrowserWindow): boolean => !window.isDestroyed())
+    .forEach((window: BrowserWindow): void => window.webContents.send(RepoChannel.StatusChanged, status));
+}
+
+export async function handleLoadRepo(service: RepoService, payload: unknown): Promise<ApiResponse<RepoStatus>> {
+  const dto = parseLoadRepoDto(payload);
+  if (dto === null) return errorResponse(RepoErrorCode.InvalidUrl, INVALID_DTO_MESSAGE);
+  try {
+    return successResponse(await service.load(dto.url));
+  } catch (error: unknown) {
+    return toErrorResponse(error);
+  }
 }
 
 /** Request/response only; the service does the work. */
-export function registerRepoController(service: RepoService): void {
-  ipcMain.handle(RepoChannel.GetStatus, (): ApiResponse<RepoStatus> => successResponse(service.getStatus()));
-  ipcMain.handle(RepoChannel.Load, async (_event, payload: unknown): Promise<ApiResponse<RepoStatus>> => {
-    const dto = parseLoadRepoDto(payload);
-    if (dto === null) return errorResponse(RepoErrorCode.InvalidUrl, INVALID_DTO_MESSAGE);
-    try {
-      return successResponse(await service.load(dto.url));
-    } catch (error: unknown) {
-      return toErrorResponse(error);
-    }
-  });
+export function registerRepoController(service: RepoService, registrar: IpcRegistrar = ipcMain): void {
+  registrar.handle(RepoChannel.GetStatus, (): ApiResponse<RepoStatus> => successResponse(service.getStatus()));
+  registrar.handle(RepoChannel.Load, (_event: IpcMainInvokeEvent, payload: unknown): Promise<ApiResponse<RepoStatus>> => handleLoadRepo(service, payload));
   service.onStatus(broadcast);
 }

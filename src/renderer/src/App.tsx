@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 
+import { useRepoStatusSubscription } from './api/repoQueries';
 import { AddFigureDialog } from './components/AddFigureDialog';
 import { LoadRepoDialog } from './components/LoadRepoDialog';
 import { Navbar } from './components/Navbar';
 import { GameCanvas } from './game/GameCanvas';
 
 export function App(): React.JSX.Element {
+  useRepoStatusSubscription();
   const [isAddFigureOpen, setIsAddFigureOpen] = useState(false);
   const [isLoadRepoOpen, setIsLoadRepoOpen] = useState(false);
   const handleOpenAddFigure = (): void => setIsAddFigureOpen(true);

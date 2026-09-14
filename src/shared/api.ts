@@ -21,4 +21,6 @@ declare global {
   interface Window {
     office: OfficeApi;
   }
+  /** Injected at build time from package.json by electron.vite.config.ts. */
+  const __APP_VERSION__: string;
 }

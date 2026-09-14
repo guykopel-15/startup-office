@@ -1,5 +1,5 @@
 import { IDLE_REPO_STATUS, RepoState } from '@shared/repo';
-import { useRepoStatus, useRepoStatusSubscription } from '../api/repoQueries';
+import { useRepoStatus } from '../api/repoQueries';
 
 import type React from 'react';
 import type { RepoStatus } from '@shared/repo';
@@ -24,7 +24,6 @@ function chipTitle(status: RepoStatus): string {
 
 /** Navbar chip: a colored dot for the state and the repo name; the name hides on narrow windows. */
 export function RepoStatusChip(): React.JSX.Element {
-  useRepoStatusSubscription();
   const { data } = useRepoStatus();
   const status: RepoStatus = data ?? IDLE_REPO_STATUS;
   return (

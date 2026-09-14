@@ -6,9 +6,10 @@ interface DSInputProps extends DSFieldControlProps {
   onChange: (value: string) => void;
   placeholder?: string;
   maxLength?: number;
+  onKeyDown?: (event: React.KeyboardEvent<HTMLInputElement>) => void;
 }
 
-export function DSInput({ id, value, onChange, placeholder, maxLength, ...ariaProps }: DSInputProps): React.JSX.Element {
+export function DSInput({ id, value, onChange, placeholder, maxLength, onKeyDown, ...ariaProps }: DSInputProps): React.JSX.Element {
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>): void => onChange(event.target.value);
-  return <input id={id} className="ds-input" type="text" value={value} onChange={handleChange} placeholder={placeholder} maxLength={maxLength} autoComplete="off" {...ariaProps} />;
+  return <input id={id} className="ds-input" type="text" value={value} onChange={handleChange} placeholder={placeholder} maxLength={maxLength} onKeyDown={onKeyDown} autoComplete="off" {...ariaProps} />;
 }

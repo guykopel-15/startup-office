@@ -2,6 +2,8 @@
  * Builds the page script that opens the Add figure dialog and fills it with a sample figure.
  * The returned string runs inside the renderer (via STARTUP_OFFICE_SCRIPT), so it must stay plain browser JS.
  */
+import { PAGE_HELPERS } from './pageHelpers.mts';
+
 export interface SampleFigure {
   name: string;
   job: string;
@@ -45,13 +47,7 @@ function fillStatements(sample: SampleFigure): string {
 export function buildFillScript(sample: SampleFigure, shouldSubmit: boolean): string {
   const submit = shouldSubmit ? `await wait(${BEFORE_SUBMIT_MS});\n  document.querySelector('[aria-label=${JSON.stringify(SUBMIT_BUTTON_LABEL)}]').click();` : '';
   return `(async () => {
-  const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
-  // React controlled inputs only notice a value set through the native setter followed by an input event.
-  const setReactValue = (element, value) => {
-    Object.getOwnPropertyDescriptor(Object.getPrototypeOf(element), 'value').set.call(element, value);
-    element.dispatchEvent(new Event('input', { bubbles: true }));
-    element.dispatchEvent(new Event('change', { bubbles: true }));
-  };
+  ${PAGE_HELPERS}
   document.querySelector('[aria-label=${JSON.stringify(OPEN_BUTTON_LABEL)}]').click();
   await wait(${DIALOG_SETTLE_MS});
   ${fillStatements(sample)}

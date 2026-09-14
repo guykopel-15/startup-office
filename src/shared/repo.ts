@@ -35,17 +35,32 @@ export enum RepoErrorCode {
   GitNotFound = 'REPO_GIT_NOT_FOUND',
   CloneFailed = 'REPO_CLONE_FAILED',
   Busy = 'REPO_BUSY',
+  Timeout = 'REPO_TIMEOUT',
 }
 
 export const IDLE_REPO_STATUS: RepoStatus = { state: RepoState.Idle, url: null, fullName: null, path: null, message: null };
 
+const HTTPS_PROTOCOL = 'https:';
 const GITHUB_HOST = 'github.com';
 const GITHUB_HOST_WWW = 'www.github.com';
+const CLONE_URL_PREFIX = `https://${GITHUB_HOST}/`;
 const GIT_SUFFIX = /\.git$/;
+const PATH_SEPARATOR = '/';
 const SEGMENT_PATTERN = /^[A-Za-z0-9_.-]+$/;
+const RESERVED_SEGMENTS: readonly string[] = ['.', '..'];
 const OWNER_INDEX = 0;
 const NAME_INDEX = 1;
 const REQUIRED_SEGMENTS = 2;
+
+function isValidSegment(segment: string): boolean {
+  return SEGMENT_PATTERN.test(segment) && !RESERVED_SEGMENTS.includes(segment);
+}
+
+function isPlainGitHubOrigin(parsed: URL): boolean {
+  const isGitHubHost = parsed.hostname === GITHUB_HOST || parsed.hostname === GITHUB_HOST_WWW;
+  const hasExtras = parsed.username !== '' || parsed.password !== '' || parsed.port !== '';
+  return parsed.protocol === HTTPS_PROTOCOL && isGitHubHost && !hasExtras;
+}
 
 /** Accepts `https://github.com/owner/repo`, with or without `.git`, `www.` or a trailing slash. Pure. */
 export function parseGitHubUrl(raw: string): GitHubRepoRef | null {
@@ -55,12 +70,11 @@ export function parseGitHubUrl(raw: string): GitHubRepoRef | null {
   } catch {
     return null;
   }
-  if (parsed.protocol !== 'https:') return null;
-  if (parsed.hostname !== GITHUB_HOST && parsed.hostname !== GITHUB_HOST_WWW) return null;
-  const segments = parsed.pathname.split('/').filter((segment: string): boolean => segment.length > 0);
+  if (!isPlainGitHubOrigin(parsed)) return null;
+  const segments = parsed.pathname.split(PATH_SEPARATOR).filter((segment: string): boolean => segment.length > 0);
   if (segments.length !== REQUIRED_SEGMENTS) return null;
   const owner = segments[OWNER_INDEX] ?? '';
   const name = (segments[NAME_INDEX] ?? '').replace(GIT_SUFFIX, '');
-  if (!SEGMENT_PATTERN.test(owner) || !SEGMENT_PATTERN.test(name) || name === '.' || name === '..') return null;
-  return { owner, name, cloneUrl: `https://${GITHUB_HOST}/${owner}/${name}.git` };
+  if (!isValidSegment(owner) || !isValidSegment(name)) return null;
+  return { owner, name, cloneUrl: `${CLONE_URL_PREFIX}${owner}${PATH_SEPARATOR}${name}.git` };
 }

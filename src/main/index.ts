@@ -5,6 +5,7 @@ import { app, BrowserWindow, shell } from 'electron';
 import { createLogger } from '../shared/logger';
 import { readConfig } from './config';
 import { registerRepoController } from './ipc/repoController';
+import { killRunningGit } from './services/gitRunner';
 import { RepoService } from './services/repoService';
 import { captureWindowToFile } from './services/screenshotService';
 import {
@@ -84,3 +85,4 @@ void app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', handleAllWindowsClosed);
+app.on('before-quit', killRunningGit);

@@ -11,7 +11,7 @@ around a lobby corridor. In each room sit pixel figures, one per job. Every figu
 with its own role prompt. The player is the CEO and is not a figure: the CEO watches
 the office from above, clicks figures to talk, gives tasks, and watches work flow.
 
-Pasting a GitHub repo URL in the navbar loads a "new world": the app clones the repo,
+Pasting a GitHub repo URL in the Load repo dialog loads a "new world": the app clones the repo,
 and every figure reads the slice of it that matches its job and reports back.
 
 ## 2. Decisions (locked)
@@ -49,13 +49,13 @@ two spare desks; a full department is disabled in the dialog.
 ```
 ┌──────────────────────────────── Electron ────────────────────────────────┐
 │  Main process (Node)                                                      │
-│   ├─ RepoService      shallow clone / pull into userData/repos/<owner>__<name>│
+│   ├─ RepoService      shallow clone/pull into repos/<owner>__<name>      │
 │   ├─ AgentRunner      spawn `claude -p` per figure, stream stdout as IPC   │
 │   ├─ StateStore       figures.json, sprints.json, world.json              │
 │   └─ IPC bridge       typed channels, exposed via preload contextBridge   │
 │                                                                           │
 │  Renderer (React + Phaser)                                                │
-│   ├─ <Navbar>         repo URL paste, add figure, settings                │
+│   ├─ <Navbar>         Load repo + Add figure dialogs, repo status chip     │
 │   ├─ <GameCanvas>     Phaser scene: tilemap, rooms, figures, CEO, camera  │
 │   ├─ <HUD>            bottom bar: company stats, quest log, chat, minimap  │
 │   ├─ <DialogBox>      MapleStory-style NPC dialog                         │
@@ -117,6 +117,11 @@ interface AgentRun {
 
 interface Sprint { id: string; name: string; goal: string; taskIds: string[]; status: 'planning' | 'active' | 'closed' }
 
+enum RepoState { Idle, Cloning, Ready, Error }
+
+/** Live repo status pushed from main; World keeps the persisted subset. */
+interface RepoStatus { state: RepoState; url: string | null; fullName: string | null; path: string | null; message: string | null }
+
 interface World { repoUrl: string | null; repoPath: string | null; companyName: string; money: number; hp: number }
 ```
 
@@ -151,16 +156,20 @@ interface World { repoUrl: string | null; repoPath: string | null; companyName: 
 | Case | Behavior |
 |---|---|
 | `claude` CLI not found | Blocking banner with install link, agents disabled |
-| Clone fails | Dialog shows the last git line as the error, chip turns red, world unchanged |
+| `git` not found | Load repo dialog shows "git is not installed or not on PATH", chip red |
+| Load while a clone runs | Dialog shows "A repository is already being cloned" |
+| git waits for credentials | Prompts are disabled (`GIT_TERMINAL_PROMPT=0`), so git fails fast; any git run is killed after 5 minutes |
+| Clone fails | Dialog shows the last git line as the error, chip turns red with that repo's name, the half clone is deleted so the next try starts clean |
 | Agent exit ≠ 0 | Figure `error`, red bubble, full stderr in AgentPanel, retry button |
 | Concurrency cap hit | Task shows "queued", figure walks to desk and waits |
 | Corrupt JSON state | Backup file renamed `.bak`, fresh defaults loaded, warning shown |
 
 ## 9. Testing
 
-- Main process: unit tests with Vitest for RepoService, AgentRunner (mocked child
-  process), StateStore.
-- Renderer: Vitest + Testing Library for the figures store, the Add figure dialog and modal, HUD, DialogBox, AgentPanel.
+- Main process: unit tests with Vitest for RepoService (injected git runner), the real git
+  runner against `git --version`, the repo controller (DTO, error mapping, registration),
+  the URL parser, AgentRunner, StateStore.
+- Renderer: Vitest + Testing Library for the figures store, the Add figure dialog and modal, the Load repo dialog, the repo status chip, HUD, DialogBox, AgentPanel.
 - Phaser scene: smoke test that the scene boots headless and spawns N figures (pending; today Phaser is mocked in unit tests).
 - Manual: paste a repo, watch intake run, give a task, see it move to done.
 
