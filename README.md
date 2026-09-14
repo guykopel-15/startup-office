@@ -85,7 +85,7 @@ One task = one branch = one pull request, built in order.
 | # | Task | Deliverable | Status |
 |---|---|---|---|
 | 0 | Spec + repo | Design doc, README, GitHub repo | ✅ |
-| 1 | Electron scaffold | Window opens, React + Vite + TS, navbar shell, empty Phaser scene | ☐ |
+| 1 | Electron scaffold | Window opens, React + Vite + TS, navbar shell, empty Phaser scene | ✅ |
 | 2 | Office map | Tilemap with all rooms, parallax, camera, CEO avatar walks | ☐ |
 | 3 | Figures | Default figures at desks, idle animation, name tag | ☐ |
 | 4 | Add figure | `+` in navbar: department, job, sprite, role prompt | ☐ |

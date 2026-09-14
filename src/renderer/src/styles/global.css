@@ -1,0 +1,96 @@
+:root {
+  --bg: #1a1330;
+  --panel: #2a1f4d;
+  --border: #4a3b7a;
+  --text: #f1ecff;
+  --muted: #8a7fb3;
+  --accent: #ffd866;
+  --navbar-h: 48px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: ui-monospace, Menlo, monospace;
+  user-select: none;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.navbar {
+  height: var(--navbar-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px 0 88px; /* room for macOS traffic lights */
+  background: var(--panel);
+  border-bottom: 2px solid var(--border);
+  -webkit-app-region: drag;
+}
+
+.navbar__brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.navbar__logo {
+  color: var(--accent);
+  font-size: 18px;
+}
+
+.navbar__title {
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 13px;
+}
+
+.navbar__actions {
+  display: flex;
+  gap: 8px;
+  -webkit-app-region: no-drag;
+}
+
+.btn {
+  font: inherit;
+  font-size: 12px;
+  padding: 6px 12px;
+  color: var(--text);
+  background: var(--bg);
+  border: 2px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.game-canvas {
+  flex: 1;
+  min-height: 0;
+}
+
+.game-canvas canvas {
+  display: block;
+}
