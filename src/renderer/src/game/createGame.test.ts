@@ -11,6 +11,7 @@ vi.mock('phaser', () => ({
     AUTO: 0,
     Scale: { RESIZE: 'RESIZE', CENTER_BOTH: 'CENTER_BOTH' },
     Scene: class {},
+    Events: { EventEmitter: class {} },
   },
 }));
 
