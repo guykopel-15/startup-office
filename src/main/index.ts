@@ -3,7 +3,10 @@ import { join } from 'node:path';
 import { app, BrowserWindow, shell } from 'electron';
 
 import { createLogger } from '../shared/logger';
+import { readConfig } from './config';
+import { captureWindowToFile } from './services/screenshotService';
 import {
+  APP_ICON_PATH,
   WINDOW_BACKGROUND_COLOR,
   WINDOW_DEFAULT_HEIGHT,
   WINDOW_DEFAULT_WIDTH,
@@ -13,14 +16,16 @@ import {
 } from './windowConfig';
 
 const logger = createLogger('main');
+const config = readConfig();
 
-function createWindow(): void {
+function createWindow(): BrowserWindow {
   const mainWindow = new BrowserWindow({
     width: WINDOW_DEFAULT_WIDTH,
     height: WINDOW_DEFAULT_HEIGHT,
     minWidth: WINDOW_MIN_WIDTH,
     minHeight: WINDOW_MIN_HEIGHT,
     title: WINDOW_TITLE,
+    icon: APP_ICON_PATH,
     backgroundColor: WINDOW_BACKGROUND_COLOR,
     titleBarStyle: 'hiddenInset',
     webPreferences: {
@@ -36,12 +41,12 @@ function createWindow(): void {
     return { action: 'deny' };
   });
 
-  const rendererUrl = process.env.ELECTRON_RENDERER_URL;
-  if (rendererUrl !== undefined) {
-    void mainWindow.loadURL(rendererUrl);
-    return;
+  if (config.rendererUrl !== undefined) {
+    void mainWindow.loadURL(config.rendererUrl);
+  } else {
+    void mainWindow.loadFile(join(__dirname, '../renderer/index.html'));
   }
-  void mainWindow.loadFile(join(__dirname, '../renderer/index.html'));
+  return mainWindow;
 }
 
 function handleActivate(): void {
@@ -49,13 +54,28 @@ function handleActivate(): void {
 }
 
 function handleAllWindowsClosed(): void {
-  if (process.platform !== 'darwin') app.quit();
+  if (!config.isDarwin) app.quit();
+}
+
+async function handleScreenshotRequest(mainWindow: BrowserWindow, outputPath: string): Promise<void> {
+  try {
+    await captureWindowToFile(mainWindow, outputPath);
+  } catch (error: unknown) {
+    logger.error('screenshot failed', error);
+  }
+  app.quit();
 }
 
 void app.whenReady().then(() => {
   logger.info('app ready');
-  createWindow();
+  if (config.isDarwin && !app.isPackaged) app.dock?.setIcon(APP_ICON_PATH);
+  const mainWindow = createWindow();
   app.on('activate', handleActivate);
+  const { screenshotPath } = config;
+  if (screenshotPath === undefined) return;
+  mainWindow.webContents.once('did-finish-load', () => {
+    void handleScreenshotRequest(mainWindow, screenshotPath);
+  });
 });
 
 app.on('window-all-closed', handleAllWindowsClosed);
