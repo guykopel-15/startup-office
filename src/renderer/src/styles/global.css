@@ -290,6 +290,63 @@ body[data-platform='darwin'] .navbar {
   border-color: var(--accent);
 }
 
+.repo-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 220px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--muted);
+  border: 2px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  -webkit-app-region: no-drag;
+}
+
+.repo-chip__text {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.repo-chip__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted);
+  flex-shrink: 0;
+}
+
+.repo-chip--ready {
+  color: var(--text);
+}
+
+.repo-chip--ready .repo-chip__dot {
+  background: #5fe089;
+}
+
+.repo-chip--cloning .repo-chip__dot {
+  background: var(--accent);
+  animation: repo-chip-pulse 1s ease-in-out infinite;
+}
+
+.repo-chip--error .repo-chip__dot {
+  background: #ff4d6d;
+}
+
+@keyframes repo-chip-pulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.dialog-help {
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
 .ds-button__icon {
   display: none;
 }
@@ -311,6 +368,10 @@ body[data-platform='darwin'] .navbar {
   .ds-button {
     min-width: 32px;
     padding: 6px 8px;
+  }
+
+  .repo-chip__text {
+    display: none;
   }
 }
 

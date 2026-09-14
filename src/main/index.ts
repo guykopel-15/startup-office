@@ -4,9 +4,12 @@ import { app, BrowserWindow, shell } from 'electron';
 
 import { createLogger } from '../shared/logger';
 import { readConfig } from './config';
+import { registerRepoController } from './ipc/repoController';
+import { RepoService } from './services/repoService';
 import { captureWindowToFile } from './services/screenshotService';
 import {
   APP_ICON_PATH,
+  APP_NAME,
   WINDOW_BACKGROUND_COLOR,
   WINDOW_DEFAULT_HEIGHT,
   WINDOW_DEFAULT_WIDTH,
@@ -17,6 +20,7 @@ import {
 
 const logger = createLogger('main');
 const config = readConfig(app.isPackaged);
+app.setName(APP_NAME);
 
 function createWindow(): BrowserWindow {
   const mainWindow = new BrowserWindow({
@@ -68,6 +72,7 @@ async function handleScreenshotRequest(mainWindow: BrowserWindow, outputPath: st
 
 void app.whenReady().then(() => {
   logger.info('app ready');
+  registerRepoController(new RepoService(app.getPath('userData')));
   if (config.isDarwin && !app.isPackaged) app.dock?.setIcon(APP_ICON_PATH);
   const mainWindow = createWindow();
   app.on('activate', handleActivate);

@@ -4,6 +4,7 @@
 
 | Version | Date | Changes |
 |---|---|---|
+| 1.0.5 | 2026-09-14 | **Added:** Load repo dialog: paste a GitHub URL, the main process clones it shallowly into the app data folder (or pulls when it is already there) and pushes status over IPC; navbar chip with the repo name and a state dot (cloning, ready, failed); typed IPC bridge (`window.office.repo`), controller + service split, standard `successResponse` / error shape, TanStack Query hooks for main-process data. **Changed:** app-data folder pinned to `startup-office` in dev too |
 | 1.0.4 | 2026-09-14 | **Added:** Add figure dialog (name, job, department with seats left, hair style, accessory, six colors, role prompt, live pixel preview); figures store (Zustand) that seats new figures on the next free desk; the scene subscribes to the store; design kit: `DSModal`, `DSField`, `DSInput`, `DSSelect`, `DSTextArea`, `DSColorInput`; one or two spare desks per department; `STARTUP_OFFICE_SCRIPT` dev hook to drive the page before a capture. **Changed:** Add figure button enabled; plants moved in R&D and Marketing to make room for the spare desks; review fixes: modal keeps focus while typing, traps Tab, restores focus and ignores drags onto the backdrop; selects show a chevron; errors linked to their inputs; store validates text; scene unsubscribes on destroy |
 | 1.0.3 | 2026-09-14 | **Added:** office rebuilt to the owner's design package: opaque blue walls (tall far walls, low near rims, 0.6-tile-thick interior walls with door gaps), windows, whiteboards, charts, sticky notes, posters, rugs, per-room floors (tile, orange, checker, corridor runner), department furniture kits (server rack, bookshelf, meeting table + chairs, kitchen counter, fridge, round table, stools, water cooler, sofa, filing cabinet, safe), desk props (mug, lamp, paper, keyboard); responsive down to a 300px window: navbar collapses to icon buttons, camera fits the office and supports wheel zoom + drag pan; `STARTUP_OFFICE_WINDOW=WxH` dev override. **Changed:** window minimum 1024×640 → 300×300, responsive rule now 300px; macOS traffic-light inset applied only on macOS; review fixes: wall decor depth, click vs drag, listener teardown, exterior walls batched into one object. **Removed:** glass-wall look |
 | 1.0.2 | 2026-09-14 | **Added:** desks, meeting table and reception desk in the isometric rooms; 16 default chibi figures (one per job) composed from a shared pixel template with hair styles, accessories and per-figure colors; idle bob and blink; name tag that expands to the job on hover; click emits `figure:clicked` on the game event bus. **Changed:** walls drawn per tile and depth-sorted against figures and desks; `RoomKey` moved to `src/shared/figures.ts` |
@@ -49,8 +50,13 @@ its desk typing, and its screen fills with the live output of the agent.
 
 1. **See everything.** The whole office fits on one page. You are the CEO looking down
    at it. You are not a figure; every figure is an employee.
-2. **Load a world.** Click the repo button in the navbar and paste a GitHub URL. The
-   app clones it and every figure explores the part of the code that matches its job.
+2. **Load a world.** Click **Load repo** in the navbar and paste a GitHub URL. The app clones
+   it into its data folder and the chip next to the button turns green. From task 7 on, every
+   figure then explores the part of the code that matches its job.
+
+   ![Load repo dialog](docs/images/load-repo-dialog.png)
+
+   ![Repo loaded](docs/images/repo-loaded.png)
 3. **Talk.** Click a figure. A MapleStory-style dialog opens.
    Read the figure's report or give it a task. You can also type a task in the HUD
    chat box and the app routes it to the right figure.
@@ -122,7 +128,7 @@ One task = one branch = one pull request, built in order.
 | 3 | Figures + desks | Desks per room, one detailed figure per job, idle animation, name tag, click emits event | ✅ |
 | 4 | Office style | Owner's design package: opaque walls, windows, decor, per-room floors and furniture kits; responsive to 300px | ✅ |
 | 5 | Add figure | Dialog with department, job, look and role prompt; new figure sits at a free desk | ✅ |
-| 6 | Repo intake | Paste URL, clone, status in navbar | ☐ |
+| 6 | Repo intake | Paste URL, clone, status in navbar | ✅ |
 | 7 | Agent runner | `claude -p` per figure, streamed to a panel, intake run on repo load | ☐ |
 | 8 | Figure states | idle / working / done / error, speech bubbles, desk screens | ☐ |
 | 9 | NPC dialog + HUD chat | Talk to a figure, give a task, it routes to the assignee | ☐ |

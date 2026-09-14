@@ -49,7 +49,7 @@ two spare desks; a full department is disabled in the dialog.
 ```
 ┌──────────────────────────────── Electron ────────────────────────────────┐
 │  Main process (Node)                                                      │
-│   ├─ RepoService      clone / pull repo into userData/repos/<name>        │
+│   ├─ RepoService      shallow clone / pull into userData/repos/<owner>__<name>│
 │   ├─ AgentRunner      spawn `claude -p` per figure, stream stdout as IPC   │
 │   ├─ StateStore       figures.json, sprints.json, world.json              │
 │   └─ IPC bridge       typed channels, exposed via preload contextBridge   │
@@ -151,7 +151,7 @@ interface World { repoUrl: string | null; repoPath: string | null; companyName: 
 | Case | Behavior |
 |---|---|
 | `claude` CLI not found | Blocking banner with install link, agents disabled |
-| Clone fails | Navbar shows error toast with git stderr, world unchanged |
+| Clone fails | Dialog shows the last git line as the error, chip turns red, world unchanged |
 | Agent exit ≠ 0 | Figure `error`, red bubble, full stderr in AgentPanel, retry button |
 | Concurrency cap hit | Task shows "queued", figure walks to desk and waits |
 | Corrupt JSON state | Backup file renamed `.bak`, fresh defaults loaded, warning shown |
@@ -176,7 +176,7 @@ One task = one branch = one PR, in order.
 | 3 | Figures + desks | Desks per room, one detailed figure per job, idle animation, name tag, click emits event |
 | 4 | Office style | Rebuild to the owner's design package: opaque walls, windows, decor, floors, furniture kits |
 | 5 | Add figure | Dialog with department, job, look and role prompt; new figure sits at a free desk |
-| 6 | Repo intake | Paste URL, clone, status in navbar |
+| 6 | Repo intake | Load repo dialog, shallow clone via git, status chip in the navbar |
 | 7 | Agent runner | `claude -p` per figure, streamed to AgentPanel, intake run on repo load |
 | 8 | Figure states | idle / working / done / error animations, speech bubbles, desk screens |
 | 9 | NPC dialog + HUD chat | Click a figure, give a task, task routes to the assignee |
