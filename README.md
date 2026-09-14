@@ -4,6 +4,7 @@
 
 | Version | Date | Changes |
 |---|---|---|
+| 1.0.4 | 2026-09-14 | **Added:** Add figure dialog (name, job, department with seats left, hair style, accessory, six colors, role prompt, live pixel preview); figures store (Zustand) that seats new figures on the next free desk; the scene subscribes to the store; design kit: `DSModal`, `DSField`, `DSInput`, `DSSelect`, `DSTextArea`, `DSColorInput`; one or two spare desks per department; `STARTUP_OFFICE_SCRIPT` dev hook to drive the page before a capture. **Changed:** Add figure button enabled |
 | 1.0.3 | 2026-09-14 | **Added:** office rebuilt to the owner's design package: opaque blue walls (tall far walls, low near rims, 0.6-tile-thick interior walls with door gaps), windows, whiteboards, charts, sticky notes, posters, rugs, per-room floors (tile, orange, checker, corridor runner), department furniture kits (server rack, bookshelf, meeting table + chairs, kitchen counter, fridge, round table, stools, water cooler, sofa, filing cabinet, safe), desk props (mug, lamp, paper, keyboard); responsive down to a 300px window: navbar collapses to icon buttons, camera fits the office and supports wheel zoom + drag pan; `STARTUP_OFFICE_WINDOW=WxH` dev override. **Changed:** window minimum 1024×640 → 300×300, responsive rule now 300px; macOS traffic-light inset applied only on macOS; review fixes: wall decor depth, click vs drag, listener teardown, exterior walls batched into one object. **Removed:** glass-wall look |
 | 1.0.2 | 2026-09-14 | **Added:** desks, meeting table and reception desk in the isometric rooms; 16 default chibi figures (one per job) composed from a shared pixel template with hair styles, accessories and per-figure colors; idle bob and blink; name tag that expands to the job on hover; click emits `figure:clicked` on the game event bus. **Changed:** walls drawn per tile and depth-sorted against figures and desks; `RoomKey` moved to `src/shared/figures.ts` |
 | 1.0.1 | 2026-09-14 | **Added:** isometric office floor on one page (7 rooms around a lobby corridor, glass walls, door gaps, floor slab, tile grid), app icon, dev self-screenshot hook. **Changed:** view is an isometric floor plan instead of a side-scroller; the CEO is the player outside the office, not a figure |
@@ -56,8 +57,10 @@ its desk typing, and its screen fills with the live output of the agent.
 4. **Run sprints.** Tasks are quests. Open the sprint board in the meeting room, drag
    quests in, and start the sprint. Figures walk to the meeting room for planning,
    then back to their desks to work.
-5. **Grow the team.** Press `+` in the navbar to add a figure to any department with a
-   job title, a sprite, and a role prompt.
+5. **Grow the team.** Press **Add figure** in the navbar. Pick a department with a free
+   desk, give the person a name, job, look and role prompt, and they sit down.
+
+   ![Add figure dialog](docs/images/add-figure-dialog.png)
 6. **Level up.** Figures gain XP for finished tasks. Failed tasks show damage numbers.
    Closing a sprint throws confetti.
 
@@ -99,8 +102,9 @@ npm run dev
 Other scripts: `npm test`, `npm run typecheck`, `npm run build`, `npm run icon` (regenerates
 `build/icon.png` from pixel rows), `npm run package` (dmg). Set `STARTUP_OFFICE_SCREENSHOT=out.png`
 when launching to capture the window to a file and quit, which is how the README images are made.
-`STARTUP_OFFICE_WINDOW=300x600` opens the window at a given size, for checking small layouts. Both
-overrides are ignored in packaged builds. The app works down to a 300px wide window:
+`STARTUP_OFFICE_WINDOW=300x600` opens the window at a given size, for checking small layouts.
+`STARTUP_OFFICE_SCRIPT=scripts/screenshots/addFigureDialog.js` runs a script in the page before the
+capture, to open dialogs or fill forms. All three are ignored in packaged builds. The app works down to a 300px wide window:
 
 ![The office in a 300px window](docs/images/office-300px.png)
 
@@ -115,7 +119,7 @@ One task = one branch = one pull request, built in order.
 | 2 | Office map | Isometric floor on one page: rooms, corridor, glass walls, doors, app icon | ✅ |
 | 3 | Figures + desks | Desks per room, one detailed figure per job, idle animation, name tag, click emits event | ✅ |
 | 4 | Office style | Owner's design package: opaque walls, windows, decor, per-room floors and furniture kits; responsive to 300px | ✅ |
-| 5 | Add figure | `+` in navbar: department, job, sprite, role prompt | ☐ |
+| 5 | Add figure | Dialog with department, job, look and role prompt; new figure sits at a free desk | ✅ |
 | 6 | Repo intake | Paste URL, clone, status in navbar | ☐ |
 | 7 | Agent runner | `claude -p` per figure, streamed to a panel, intake run on repo load | ☐ |
 | 8 | Figure states | idle / working / done / error, speech bubbles, desk screens | ☐ |

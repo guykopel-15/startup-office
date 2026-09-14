@@ -40,8 +40,9 @@ and every figure reads the slice of it that matches its job and reports back.
 | Ops / HR | Office manager, Recruiter |
 | Meeting room | No permanent figure. Holds the sprint board |
 
-Figures can be added at runtime to any department with a job title, sprite, and role
-prompt.
+Figures can be added at runtime to any department that has a free desk, with a name, job,
+look (hair style, accessory, colors) and role prompt. Each department layout carries one or
+two spare desks; a full department is disabled in the dialog.
 
 ## 4. Architecture
 
@@ -64,7 +65,8 @@ prompt.
 
 Phaser and React share one event bus (`EventEmitter` in the renderer). Phaser emits
 `figure:clicked`, `ceo:nearFigure`; React emits `figure:setState`, `figure:walkTo`.
-Game state lives in a Zustand store; Phaser reads it, never owns it.
+Game state lives in a Zustand store (`store/figuresStore.ts`); Phaser subscribes and seats
+figures it has not seen, and never owns the state.
 
 ## 5. Data model
 
@@ -173,7 +175,7 @@ One task = one branch = one PR, in order.
 | 2 | Office map | Isometric floor on one page: rooms, corridor, glass walls, doors, app icon |
 | 3 | Figures + desks | Desks per room, one detailed figure per job, idle animation, name tag, click emits event |
 | 4 | Office style | Rebuild to the owner's design package: opaque walls, windows, decor, floors, furniture kits |
-| 5 | Add figure | "+" in navbar: department, job, sprite, role prompt |
+| 5 | Add figure | Dialog with department, job, look and role prompt; new figure sits at a free desk |
 | 6 | Repo intake | Paste URL, clone, status in navbar |
 | 7 | Agent runner | `claude -p` per figure, streamed to AgentPanel, intake run on repo load |
 | 8 | Figure states | idle / working / done / error animations, speech bubbles, desk screens |

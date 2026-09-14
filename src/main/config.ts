@@ -15,6 +15,8 @@ export interface MainConfig {
   screenshotPath: string | undefined;
   /** Dev only: `WIDTHxHEIGHT` to open the window at a given size for screenshots. */
   windowSize: WindowSizeOverride | undefined;
+  /** Dev only: a JavaScript file to run in the page before the screenshot is taken. */
+  screenshotScriptPath: string | undefined;
   isDarwin: boolean;
 }
 
@@ -43,6 +45,7 @@ export function readConfig(isPackaged: boolean): MainConfig {
     rendererUrl: process.env.ELECTRON_RENDERER_URL,
     screenshotPath: isPackaged ? undefined : process.env.STARTUP_OFFICE_SCREENSHOT,
     windowSize: isPackaged ? undefined : parseWindowSize(process.env.STARTUP_OFFICE_WINDOW),
+    screenshotScriptPath: isPackaged ? undefined : process.env.STARTUP_OFFICE_SCRIPT,
     isDarwin: process.platform === 'darwin',
   };
 }

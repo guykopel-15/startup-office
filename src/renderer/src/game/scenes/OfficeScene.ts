@@ -1,6 +1,5 @@
 import Phaser from 'phaser';
 
-import { DEFAULT_FIGURES } from '@shared/figures';
 import { createLogger } from '@shared/logger';
 import { HALF } from '@shared/theme';
 import { OfficeCamera } from '../camera/OfficeCamera';
@@ -13,10 +12,12 @@ import { getDeskForFigure, getFurniture, getSeatPoint } from '../world/furniture
 import { getRectCorners, getScreenBounds, projectToScreen } from '../world/isoProjection';
 import { PALETTE } from '../world/palette';
 import { EXTERIOR_WALL_HEIGHT } from '../world/walls';
+import { useFiguresStore } from '../../store/figuresStore';
 
 import type { Figure } from '@shared/figures';
 import type { Furniture } from '../world/furniture';
 import type { ScreenBounds, ScreenPoint } from '../world/isoProjection';
+import type { FiguresState } from '../../store/figuresStore';
 
 export const OFFICE_SCENE_KEY = 'office';
 const WORLD_WIDTH = 640;
@@ -34,8 +35,11 @@ const logger = createLogger('office-scene');
 
 /** The whole floor plan on one screen. The camera fits the office to the window at any size. */
 export class OfficeScene extends Phaser.Scene {
-  private figureSprites: FigureSprite[] = [];
+  private figureSprites = new Map<string, FigureSprite>();
   private officeCamera: OfficeCamera | null = null;
+  private furniture: Furniture[] = [];
+  private origin: ScreenPoint = { x: 0, y: 0 };
+  private unsubscribeFigures: (() => void) | null = null;
 
   constructor() {
     super(OFFICE_SCENE_KEY);
@@ -43,31 +47,43 @@ export class OfficeScene extends Phaser.Scene {
 
   create(): void {
     this.drawBackground();
-    const origin = getOfficeOrigin();
-    drawFloors(this, origin);
-    drawWalls(this, origin);
-    const furniture = getFurniture();
-    furniture.forEach((piece: Furniture): void => drawFurniture(this, origin, piece));
-    this.figureSprites = DEFAULT_FIGURES.flatMap((figure: Figure): FigureSprite[] => this.seatFigure(figure, furniture, origin));
-    this.officeCamera = new OfficeCamera(this, getOfficeBounds(origin));
+    this.origin = getOfficeOrigin();
+    drawFloors(this, this.origin);
+    drawWalls(this, this.origin);
+    this.furniture = getFurniture();
+    this.furniture.forEach((piece: Furniture): void => drawFurniture(this, this.origin, piece));
+    this.seatNewFigures(useFiguresStore.getState());
+    this.unsubscribeFigures = useFiguresStore.subscribe(this.handleFiguresChange);
+    this.officeCamera = new OfficeCamera(this, getOfficeBounds(this.origin));
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.handleShutdown, this);
   }
 
-  private seatFigure(figure: Figure, furniture: readonly Furniture[], origin: ScreenPoint): FigureSprite[] {
-    const desk = getDeskForFigure(furniture, figure.room, figure.deskIndex);
-    if (desk === undefined) {
-      logger.warn('figure has no desk', { id: figure.id, room: figure.room, deskIndex: figure.deskIndex });
-      return [];
-    }
-    const feet = getSeatPoint(desk);
-    return [new FigureSprite(this, figure, origin, feet, projectToScreen(feet))];
+  /** Seats every store figure that has no sprite yet; existing sprites are left alone. */
+  private seatNewFigures(state: FiguresState): void {
+    state.figures.filter((figure: Figure): boolean => !this.figureSprites.has(figure.id)).forEach((figure: Figure): void => this.seatFigure(figure));
   }
 
+  private seatFigure(figure: Figure): void {
+    const desk = getDeskForFigure(this.furniture, figure.room, figure.deskIndex);
+    if (desk === undefined) {
+      logger.warn('figure has no desk', { id: figure.id, room: figure.room, deskIndex: figure.deskIndex });
+      return;
+    }
+    const feet = getSeatPoint(desk);
+    this.figureSprites.set(figure.id, new FigureSprite(this, figure, this.origin, feet, projectToScreen(feet)));
+  }
+
+  private readonly handleFiguresChange = (state: FiguresState): void => {
+    this.seatNewFigures(state);
+  };
+
   private handleShutdown(): void {
+    this.unsubscribeFigures?.();
+    this.unsubscribeFigures = null;
     this.officeCamera?.destroy();
     this.officeCamera = null;
     this.figureSprites.forEach((sprite: FigureSprite): void => sprite.destroy());
-    this.figureSprites = [];
+    this.figureSprites.clear();
   }
 
   /** Radial glow approximated with concentric ellipses, the handoff's background gradient. */
