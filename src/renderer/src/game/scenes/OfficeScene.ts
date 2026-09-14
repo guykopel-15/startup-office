@@ -56,6 +56,7 @@ export class OfficeScene extends Phaser.Scene {
     this.unsubscribeFigures = useFiguresStore.subscribe(this.handleFiguresChange);
     this.officeCamera = new OfficeCamera(this, getOfficeBounds(this.origin));
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.handleShutdown, this);
+    this.events.once(Phaser.Scenes.Events.DESTROY, this.handleShutdown, this);
   }
 
   /** Seats every store figure that has no sprite yet; existing sprites are left alone. */

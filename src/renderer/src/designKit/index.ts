@@ -5,4 +5,5 @@ export { DSInput } from './DSInput';
 export { DSModal } from './DSModal';
 export { DSSelect } from './DSSelect';
 export { DSTextArea } from './DSTextArea';
+export type { DSFieldControlProps } from './DSField';
 export type { DSSelectOption } from './DSSelect';

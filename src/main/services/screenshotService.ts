@@ -19,7 +19,12 @@ export async function captureWindowToFile(window: BrowserWindow, outputPath: str
   await wait(SETTLE_DELAY_MS);
   if (scriptPath !== undefined) {
     const script = await readFile(scriptPath, 'utf8');
-    await window.webContents.executeJavaScript(script, true);
+    try {
+      await window.webContents.executeJavaScript(script);
+    } catch (error: unknown) {
+      logger.error('screenshot script failed', { scriptPath, error });
+      throw error;
+    }
     await wait(AFTER_SCRIPT_DELAY_MS);
   }
   const image = await window.webContents.capturePage();

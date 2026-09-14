@@ -62,6 +62,7 @@ Verify compliance before every commit.
 - Custom hooks for IPC/async calls — handle loading, error, and data in one place
 - TanStack Query for all data that comes from the main process
 - Context for global session state only, `useState` for local UI state
+- Game state shared by React and Phaser lives in the Zustand store under `src/renderer/src/store/`; Phaser subscribes to it and never owns it
 - All UI components come from the design kit (`src/renderer/src/designKit/`). Every component has a `DS` prefix. If a component doesn't exist, create it there first. No raw HTML controls (`button`, `input`, `select`) used directly in pages or panels
 - Everything in the renderer must be responsive — from a full-screen window down to a 300px wide window, degrading smoothly. Relative units, flex/grid wrapping, no fixed widths that overflow, no horizontal scroll. The Phaser canvas fills whatever space the HUD leaves it
 

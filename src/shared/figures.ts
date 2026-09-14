@@ -62,21 +62,23 @@ export interface Figure {
   experiencePoints: number;
 }
 
-const STARTING_LEVEL = 1;
-const STARTING_EXPERIENCE = 0;
+export const STARTING_LEVEL = 1;
+export const STARTING_EXPERIENCE = 0;
+export const NAME_MAX_LENGTH = 24;
+export const JOB_MAX_LENGTH = 32;
 
-const SKIN_LIGHT = '#f5c9a2';
+export const SKIN_LIGHT = '#f5c9a2';
 const SKIN_TAN = '#d9a072';
 const SKIN_DEEP = '#8d5a3c';
-const HAIR_BROWN = '#5a3a22';
+export const HAIR_BROWN = '#5a3a22';
 const HAIR_BLACK = '#2b1b3d';
 const HAIR_BLONDE = '#e0b04a';
 const HAIR_RED = '#b8472d';
 const HAIR_GREY = '#9a9ab0';
-const PANTS_NAVY = '#26305a';
+export const PANTS_NAVY = '#26305a';
 const PANTS_DARK = '#1f1a33';
 const PANTS_KHAKI = '#7a6a4a';
-const TOP_PURPLE = '#7b5cff';
+export const TOP_PURPLE = '#7b5cff';
 const TOP_SLATE = '#2f3e5c';
 const TOP_PINK = '#ff8ad4';
 const TOP_GREEN = '#3f9a4a';
@@ -92,11 +94,11 @@ const TOP_GREY = '#8a8aa8';
 const TOP_MIDNIGHT = '#1f2a4a';
 const TOP_AMBER = '#ff9f5a';
 const TOP_CYAN = '#4fc3c3';
-const GLASSES_FRAME = THEME_COLORS.background;
+export const GLASSES_FRAME = THEME_COLORS.background;
 const GLASSES_FRAME_PURPLE = THEME_COLORS.border;
 const HEADPHONES_RED = '#ff4d6d';
 const TIE_BLUE = '#3a7bd5';
-const HAT_BLUE = TIE_BLUE;
+export const HAT_BLUE = TIE_BLUE;
 const NO_ACCESSORY_COLOR = '#000000';
 
 type LookInput = Pick<FigureLook, 'hairStyle' | 'hairColor' | 'topColor' | 'accessory'> & Partial<FigureLook>;
@@ -109,6 +111,25 @@ function look(partial: LookInput): FigureLook {
     hatColor: HAT_BLUE,
     ...partial,
   };
+}
+
+/** The look a new figure starts with in the Add figure dialog. */
+export const DEFAULT_LOOK: FigureLook = {
+  hairStyle: HairStyle.Short,
+  hairColor: HAIR_BROWN,
+  skinColor: SKIN_LIGHT,
+  topColor: TOP_PURPLE,
+  pantsColor: PANTS_NAVY,
+  accessory: Accessory.None,
+  accessoryColor: GLASSES_FRAME,
+  hatColor: HAT_BLUE,
+};
+
+/** Trims and validates the text a figure is created with. */
+export function isValidFigureText(name: string, job: string): boolean {
+  const trimmedName = name.trim();
+  const trimmedJob = job.trim();
+  return trimmedName.length > 0 && trimmedName.length <= NAME_MAX_LENGTH && trimmedJob.length > 0 && trimmedJob.length <= JOB_MAX_LENGTH;
 }
 
 function figure(id: string, name: string, job: string, room: RoomKey, deskIndex: number, figureLook: FigureLook, rolePrompt: string): Figure {

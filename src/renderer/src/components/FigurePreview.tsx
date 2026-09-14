@@ -12,13 +12,14 @@ interface FigurePreviewProps {
 }
 
 const PIXEL_SCALE = 4;
+const CANVAS_CONTEXT = '2d';
 
 /** Draws the composed figure into a canvas so the dialog shows the look live. */
 export function FigurePreview({ look }: FigurePreviewProps): React.JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect((): void => {
-    const context = canvasRef.current?.getContext('2d');
+    const context = canvasRef.current?.getContext(CANVAS_CONTEXT);
     if (context === null || context === undefined) return;
     context.clearRect(0, 0, FIGURE_WIDTH * PIXEL_SCALE, FIGURE_HEIGHT * PIXEL_SCALE);
     parsePixelRows(composeFigureRows(look), buildFigurePalette(look)).forEach((pixel: PixelPoint): void => {

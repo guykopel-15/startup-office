@@ -160,7 +160,7 @@ interface World { repoUrl: string | null; repoPath: string | null; companyName: 
 
 - Main process: unit tests with Vitest for RepoService, AgentRunner (mocked child
   process), StateStore.
-- Renderer: Vitest + Testing Library for HUD, DialogBox, AgentPanel.
+- Renderer: Vitest + Testing Library for the figures store, the Add figure dialog and modal, HUD, DialogBox, AgentPanel.
 - Phaser scene: smoke test that the scene boots headless and spawns N figures (pending; today Phaser is mocked in unit tests).
 - Manual: paste a repo, watch intake run, give a task, see it move to done.
 
