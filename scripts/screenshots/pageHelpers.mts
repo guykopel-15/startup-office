@@ -6,3 +6,16 @@ export const PAGE_HELPERS = `const wait = (milliseconds) => new Promise((resolve
     element.dispatchEvent(new Event('input', { bubbles: true }));
     element.dispatchEvent(new Event('change', { bubbles: true }));
   };`;
+
+/** Wraps page-script statements in an async IIFE that resolves to the error message instead of throwing. */
+export function pageScript(body: string): string {
+  return `(async () => {
+  try {
+  ${PAGE_HELPERS}
+  ${body}
+  } catch (error) {
+    return 'page script failed: ' + (error && error.message ? error.message : String(error));
+  }
+})();
+`;
+}

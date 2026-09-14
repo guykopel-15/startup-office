@@ -1,46 +1,36 @@
 import { useEffect } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 
-import { IDLE_REPO_STATUS } from '@shared/repo';
+import { FloorSourceKind } from '@shared/floors';
 import { unwrapResponse } from '@shared/response';
+import { useFloorsStore } from '../store/floorsStore';
 
-import type { UseMutationResult, UseQueryResult } from '@tanstack/react-query';
-import type { RepoStatus } from '@shared/repo';
+import type { UseMutationResult } from '@tanstack/react-query';
+import type { FloorSource } from '@shared/floors';
+import type { RepoStatus, RepoStatusEvent } from '@shared/repo';
 
-export const REPO_STATUS_QUERY_KEY = ['repo', 'status'] as const;
-
-/**
- * The repo status as main last reported it. Placeholder data keeps the chip rendering
- * while the first fetch is in flight; unlike initial data it never counts as fresh.
- */
-export function useRepoStatus(): UseQueryResult<RepoStatus, Error> {
-  return useQuery({
-    queryKey: REPO_STATUS_QUERY_KEY,
-    queryFn: async (): Promise<RepoStatus> => unwrapResponse(await window.office.repo.getStatus()),
-    placeholderData: IDLE_REPO_STATUS,
-    staleTime: Number.POSITIVE_INFINITY,
-  });
+export interface PrepareRepoInput {
+  floorId: string;
+  source: FloorSource;
 }
 
-/** Keeps the status query in sync with pushes from main while mounted. Mount it once, in App. */
+/** Applies status pushes from main to the floor they belong to. Mount it once, in App. */
 export function useRepoStatusSubscription(): void {
-  const queryClient = useQueryClient();
-  useEffect((): (() => void) => {
-    return window.office.repo.onStatus((status: RepoStatus): void => {
-      // A push is always newer than an in-flight getStatus; cancel that fetch so it cannot overwrite the push.
-      void queryClient.cancelQueries({ queryKey: REPO_STATUS_QUERY_KEY });
-      queryClient.setQueryData(REPO_STATUS_QUERY_KEY, status);
-    });
-  }, [queryClient]);
+  const setRepoStatus = useFloorsStore((state): typeof state.setRepoStatus => state.setRepoStatus);
+  useEffect((): (() => void) => window.office.repo.onStatus((event: RepoStatusEvent): void => setRepoStatus(event.floorId, event.status)), [setRepoStatus]);
 }
 
-/** Clones the repo; loading, error and data all live on the mutation. */
-export function useLoadRepo(): UseMutationResult<RepoStatus, Error, string> {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (url: string): Promise<RepoStatus> => unwrapResponse(await window.office.repo.load(url)),
-    onSuccess: (status: RepoStatus): void => {
-      queryClient.setQueryData(REPO_STATUS_QUERY_KEY, status);
-    },
-  });
+async function prepareRepo(input: PrepareRepoInput): Promise<RepoStatus> {
+  if (input.source.kind === FloorSourceKind.GitHub) return unwrapResponse(await window.office.repo.load(input.floorId, input.source.url));
+  return unwrapResponse(await window.office.repo.useLocal(input.floorId, input.source.path));
+}
+
+/** Clones a GitHub repo or adopts a local folder for a floor; loading, error and data live on the mutation. */
+export function usePrepareRepo(): UseMutationResult<RepoStatus, Error, PrepareRepoInput> {
+  return useMutation({ mutationFn: prepareRepo });
+}
+
+/** Opens the native folder picker; resolves to the chosen path or null. */
+export function usePickFolder(): UseMutationResult<string | null, Error, void> {
+  return useMutation({ mutationFn: async (): Promise<string | null> => unwrapResponse(await window.office.repo.pickFolder()) });
 }

@@ -12,12 +12,12 @@ import { getDeskForFigure, getFurniture, getSeatPoint } from '../world/furniture
 import { getRectCorners, getScreenBounds, projectToScreen } from '../world/isoProjection';
 import { PALETTE } from '../world/palette';
 import { EXTERIOR_WALL_HEIGHT } from '../world/walls';
-import { useFiguresStore } from '../../store/figuresStore';
+import { selectActiveFigures, useFloorsStore } from '../../store/floorsStore';
 
 import type { Figure } from '@shared/figures';
 import type { Furniture } from '../world/furniture';
 import type { ScreenBounds, ScreenPoint } from '../world/isoProjection';
-import type { FiguresState } from '../../store/figuresStore';
+import type { FloorsState } from '../../store/floorsStore';
 
 export const OFFICE_SCENE_KEY = 'office';
 const WORLD_WIDTH = 640;
@@ -52,16 +52,23 @@ export class OfficeScene extends Phaser.Scene {
     drawWalls(this, this.origin);
     this.furniture = getFurniture();
     this.furniture.forEach((piece: Furniture): void => drawFurniture(this, this.origin, piece));
-    this.seatNewFigures(useFiguresStore.getState());
-    this.unsubscribeFigures = useFiguresStore.subscribe(this.handleFiguresChange);
+    this.syncFigures(useFloorsStore.getState());
+    this.unsubscribeFigures = useFloorsStore.subscribe(this.handleFloorsChange);
     this.officeCamera = new OfficeCamera(this, getOfficeBounds(this.origin));
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.handleShutdown, this);
     this.events.once(Phaser.Scenes.Events.DESTROY, this.handleShutdown, this);
   }
 
-  /** Seats every store figure that has no sprite yet; existing sprites are left alone. */
-  private seatNewFigures(state: FiguresState): void {
-    state.figures.filter((figure: Figure): boolean => !this.figureSprites.has(figure.id)).forEach((figure: Figure): void => this.seatFigure(figure));
+  /** Mirrors the active floor: removes sprites that left it, seats figures that joined it. */
+  private syncFigures(state: FloorsState): void {
+    const figures = selectActiveFigures(state);
+    const wanted = new Set(figures.map((figure: Figure): string => figure.id));
+    this.figureSprites.forEach((sprite: FigureSprite, id: string): void => {
+      if (wanted.has(id)) return;
+      sprite.destroy();
+      this.figureSprites.delete(id);
+    });
+    figures.filter((figure: Figure): boolean => !this.figureSprites.has(figure.id)).forEach((figure: Figure): void => this.seatFigure(figure));
   }
 
   private seatFigure(figure: Figure): void {
@@ -74,8 +81,8 @@ export class OfficeScene extends Phaser.Scene {
     this.figureSprites.set(figure.id, new FigureSprite(this, figure, this.origin, feet, projectToScreen(feet)));
   }
 
-  private readonly handleFiguresChange = (state: FiguresState): void => {
-    this.seatNewFigures(state);
+  private readonly handleFloorsChange = (state: FloorsState): void => {
+    this.syncFigures(state);
   };
 
   private handleShutdown(): void {

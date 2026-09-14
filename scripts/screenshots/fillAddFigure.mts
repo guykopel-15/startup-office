@@ -2,7 +2,8 @@
  * Builds the page script that opens the Add figure dialog and fills it with a sample figure.
  * The returned string runs inside the renderer (via STARTUP_OFFICE_SCRIPT), so it must stay plain browser JS.
  */
-import { PAGE_HELPERS } from './pageHelpers.mts';
+import { pageScript } from './pageHelpers.mts';
+import { SAMPLE_FLOORS, buildFloorsReadyScript } from './newFloor.mts';
 
 export interface SampleFigure {
   name: string;
@@ -46,12 +47,12 @@ function fillStatements(sample: SampleFigure): string {
 /** Page script: open the dialog, fill it, and optionally press "Add to office". */
 export function buildFillScript(sample: SampleFigure, shouldSubmit: boolean): string {
   const submit = shouldSubmit ? `await wait(${BEFORE_SUBMIT_MS});\n  document.querySelector('[aria-label=${JSON.stringify(SUBMIT_BUTTON_LABEL)}]').click();` : '';
-  return `(async () => {
-  ${PAGE_HELPERS}
+  const localFloor = SAMPLE_FLOORS[1] ?? SAMPLE_FLOORS[0];
+  const floorSetup = localFloor === undefined ? '' : `const floorResult = await ${buildFloorsReadyScript([localFloor]).trim()}
+  if (floorResult !== undefined) return floorResult;`;
+  return pageScript(`${floorSetup}
   document.querySelector('[aria-label=${JSON.stringify(OPEN_BUTTON_LABEL)}]').click();
   await wait(${DIALOG_SETTLE_MS});
   ${fillStatements(sample)}
-  ${submit}
-})();
-`;
+  ${submit}`);
 }

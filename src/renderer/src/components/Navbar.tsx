@@ -1,22 +1,21 @@
 import { DSButton } from '../designKit';
+import { useFloorsStore } from '../store/floorsStore';
 import { RepoStatusChip } from './RepoStatusChip';
 
 import type React from 'react';
 
 interface NavbarProps {
   onAddFigure: () => void;
-  onLoadRepo: () => void;
 }
 
 const APP_TITLE = 'Startup Office';
-const LOAD_REPO_LABEL = 'Load repo';
 const ADD_FIGURE_LABEL = 'Add figure';
-const LOAD_REPO_HINT = 'Clone a GitHub repository into the office';
-const ADD_FIGURE_HINT = 'Add an employee to a department';
-const LOAD_REPO_ICON = '⇩';
+const ADD_FIGURE_HINT = 'Add an employee to a department on this floor';
+const NO_FLOOR_HINT = 'Create a floor first';
 const ADD_FIGURE_ICON = '+';
 
-export function Navbar({ onAddFigure, onLoadRepo }: NavbarProps): React.JSX.Element {
+export function Navbar({ onAddFigure }: NavbarProps): React.JSX.Element {
+  const hasActiveFloor = useFloorsStore((state): boolean => state.activeFloorId !== null);
   return (
     <nav className="navbar" aria-label="Main">
       <div className="navbar__brand">
@@ -27,10 +26,7 @@ export function Navbar({ onAddFigure, onLoadRepo }: NavbarProps): React.JSX.Elem
       </div>
       <div className="navbar__actions">
         <RepoStatusChip />
-        <DSButton onClick={onLoadRepo} title={LOAD_REPO_HINT} icon={LOAD_REPO_ICON}>
-          {LOAD_REPO_LABEL}
-        </DSButton>
-        <DSButton onClick={onAddFigure} title={ADD_FIGURE_HINT} icon={ADD_FIGURE_ICON}>
+        <DSButton onClick={onAddFigure} isDisabled={!hasActiveFloor} title={hasActiveFloor ? ADD_FIGURE_HINT : NO_FLOOR_HINT} icon={ADD_FIGURE_ICON}>
           {ADD_FIGURE_LABEL}
         </DSButton>
       </div>

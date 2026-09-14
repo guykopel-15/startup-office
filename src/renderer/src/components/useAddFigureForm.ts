@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react';
 
 import { getFurniture } from '../game/world/furniture';
-import { useFiguresStore } from '../store/figuresStore';
+import { selectActiveFigures, useFloorsStore } from '../store/floorsStore';
 import { buildRoomOptions, defaultRolePrompt, emptyForm, validateAddFigureForm } from './addFigureForm';
 
 import type { Figure, FigureLook, RoomKey } from '@shared/figures';
 import type { DSSelectOption } from '../designKit';
 import type { AddFigureFormErrors, AddFigureFormValues } from './addFigureForm';
-import type { FiguresState } from '../store/figuresStore';
+import type { FloorsState } from '../store/floorsStore';
 
 const ROOM_FULL_ERROR = 'That department filled up. Pick another.';
 
@@ -24,8 +24,8 @@ export interface AddFigureForm {
 
 /** Form state, validation and submit for the Add figure dialog; the store does the seating. */
 export function useAddFigureForm(): AddFigureForm {
-  const figures = useFiguresStore((state: FiguresState): Figure[] => state.figures);
-  const addFigure = useFiguresStore((state: FiguresState): FiguresState['addFigure'] => state.addFigure);
+  const figures = useFloorsStore((state: FloorsState): readonly Figure[] => selectActiveFigures(state));
+  const addFigure = useFloorsStore((state: FloorsState): FloorsState['addFigure'] => state.addFigure);
   const furniture = useMemo(getFurniture, []);
   const [values, setValues] = useState<AddFigureFormValues>((): AddFigureFormValues => emptyForm(figures, furniture));
   const [errors, setErrors] = useState<AddFigureFormErrors>({});
@@ -35,7 +35,7 @@ export function useAddFigureForm(): AddFigureForm {
   const setLook = <Key extends keyof FigureLook>(key: Key, value: FigureLook[Key]): void => setValues((current: AddFigureFormValues): AddFigureFormValues => ({ ...current, look: { ...current.look, [key]: value } }));
 
   const reset = (): void => {
-    setValues(emptyForm(useFiguresStore.getState().figures, furniture));
+    setValues(emptyForm(selectActiveFigures(useFloorsStore.getState()), furniture));
     setErrors({});
   };
 

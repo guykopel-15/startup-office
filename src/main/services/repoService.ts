@@ -1,15 +1,16 @@
-import { access, mkdir, rm } from 'node:fs/promises';
-import { join } from 'node:path';
+import { mkdir, rm, stat } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { basename, isAbsolute, join, resolve } from 'node:path';
 
 import { createLogger } from '../../shared/logger';
 import { IDLE_REPO_STATUS, RepoErrorCode, RepoState, parseGitHubUrl } from '../../shared/repo';
 import { ServiceError } from '../../shared/response';
 import { runGit } from './gitRunner';
 
-import type { GitHubRepoRef, RepoStatus } from '../../shared/repo';
+import type { GitHubRepoRef, RepoStatus, RepoStatusEvent } from '../../shared/repo';
 import type { GitRunner } from './gitRunner';
 
-export type StatusListener = (status: RepoStatus) => void;
+export type StatusListener = (event: RepoStatusEvent) => void;
 
 const logger = createLogger('repo');
 const REPOS_DIRECTORY = 'repos';
@@ -19,21 +20,29 @@ const CLONE_DEPTH = '1';
 const GIT_PULL_ARGUMENTS: readonly string[] = ['pull', '--ff-only'];
 const GIT_CLONE_ARGUMENTS: readonly string[] = ['clone', '--depth', CLONE_DEPTH, '--progress'];
 const MAX_MESSAGE_LENGTH = 200;
+const HOME_PREFIX = '~/';
 const INVALID_URL_MESSAGE = 'Paste a GitHub repository URL like https://github.com/owner/repo';
+const INVALID_PATH_MESSAGE = 'That folder does not exist';
 const BUSY_MESSAGE = 'A repository is already being cloned';
 
-async function directoryExists(path: string): Promise<boolean> {
+async function isDirectory(path: string): Promise<boolean> {
   try {
-    await access(path);
-    return true;
+    return (await stat(path)).isDirectory();
   } catch {
     return false;
   }
 }
 
-/** Clones GitHub repositories into `<userData>/repos` and reports status changes. */
+/** `~/code` becomes `/Users/me/code`; everything else is resolved to an absolute path. */
+export function expandPath(raw: string): string {
+  const trimmed = raw.trim();
+  const expanded = trimmed.startsWith(HOME_PREFIX) ? join(homedir(), trimmed.slice(HOME_PREFIX.length)) : trimmed;
+  return isAbsolute(expanded) ? expanded : resolve(expanded);
+}
+
+/** One repository per floor: GitHub clones live in `<userData>/repos`, local folders are used in place. */
 export class RepoService {
-  private status: RepoStatus = IDLE_REPO_STATUS;
+  private readonly statuses = new Map<string, RepoStatus>();
   private readonly listeners = new Set<StatusListener>();
   private readonly reposRoot: string;
   private readonly git: GitRunner;
@@ -43,8 +52,8 @@ export class RepoService {
     this.git = git;
   }
 
-  getStatus(): RepoStatus {
-    return this.status;
+  getStatus(floorId: string): RepoStatus {
+    return this.statuses.get(floorId) ?? IDLE_REPO_STATUS;
   }
 
   onStatus(listener: StatusListener): () => void {
@@ -54,23 +63,35 @@ export class RepoService {
     };
   }
 
-  /** Clones `url`, or refreshes it when the clone already exists. Throws a ServiceError on failure. */
-  async load(url: string): Promise<RepoStatus> {
+  /** Points the floor at a folder already on disk. Throws when it is not a directory. */
+  async useLocal(floorId: string, rawPath: string): Promise<RepoStatus> {
+    const path = expandPath(rawPath);
+    if (!(await isDirectory(path))) throw new ServiceError(RepoErrorCode.InvalidPath, INVALID_PATH_MESSAGE);
+    this.publish(floorId, { state: RepoState.Ready, url: null, fullName: basename(path), path, message: null });
+    return this.getStatus(floorId);
+  }
+
+  /** Clones `url` for the floor, or refreshes it when the clone already exists. Throws a ServiceError on failure. */
+  async load(floorId: string, url: string): Promise<RepoStatus> {
     const repoRef = parseGitHubUrl(url);
     if (repoRef === null) throw new ServiceError(RepoErrorCode.InvalidUrl, INVALID_URL_MESSAGE);
-    if (this.status.state === RepoState.Cloning) throw new ServiceError(RepoErrorCode.Busy, BUSY_MESSAGE);
+    if (this.isAnyCloning()) throw new ServiceError(RepoErrorCode.Busy, BUSY_MESSAGE);
     const path = this.clonePathFor(repoRef);
-    this.publish({ state: RepoState.Cloning, url: repoRef.cloneUrl, fullName: `${repoRef.owner}/${repoRef.name}`, path: null, message: null });
+    this.publish(floorId, { state: RepoState.Cloning, url: repoRef.cloneUrl, fullName: `${repoRef.owner}/${repoRef.name}`, path: null, message: null });
     try {
-      await this.cloneOrRefresh(repoRef, path);
+      await this.cloneOrRefresh(floorId, repoRef, path);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
-      logger.error('repo load failed', { url: repoRef.cloneUrl, message });
-      this.publish({ ...this.status, state: RepoState.Error, message });
+      logger.error('repo load failed', { floorId, url: repoRef.cloneUrl, message });
+      this.publish(floorId, { ...this.getStatus(floorId), state: RepoState.Error, message });
       throw error;
     }
-    this.publish({ ...this.status, state: RepoState.Ready, path, message: null });
-    return this.status;
+    this.publish(floorId, { ...this.getStatus(floorId), state: RepoState.Ready, path, message: null });
+    return this.getStatus(floorId);
+  }
+
+  private isAnyCloning(): boolean {
+    return Array.from(this.statuses.values()).some((status: RepoStatus): boolean => status.state === RepoState.Cloning);
   }
 
   private clonePathFor(repoRef: GitHubRepoRef): string {
@@ -78,11 +99,12 @@ export class RepoService {
   }
 
   /** Pulls an existing clone; when the pull fails or nothing is there, clones fresh. */
-  private async cloneOrRefresh(repoRef: GitHubRepoRef, path: string): Promise<void> {
+  private async cloneOrRefresh(floorId: string, repoRef: GitHubRepoRef, path: string): Promise<void> {
     await mkdir(this.reposRoot, { recursive: true });
-    if (await directoryExists(join(path, GIT_DIRECTORY))) {
+    const handleLine = (line: string): void => this.handleOutputLine(floorId, line);
+    if (await isDirectory(join(path, GIT_DIRECTORY))) {
       try {
-        await this.git(GIT_PULL_ARGUMENTS, path, this.handleOutputLine);
+        await this.git(GIT_PULL_ARGUMENTS, path, handleLine);
         return;
       } catch (error: unknown) {
         logger.warn('pull failed, cloning fresh', { path, error });
@@ -90,24 +112,25 @@ export class RepoService {
     }
     await rm(path, { recursive: true, force: true });
     try {
-      await this.git([...GIT_CLONE_ARGUMENTS, repoRef.cloneUrl, path], undefined, this.handleOutputLine);
+      await this.git([...GIT_CLONE_ARGUMENTS, repoRef.cloneUrl, path], undefined, handleLine);
     } catch (error: unknown) {
       await rm(path, { recursive: true, force: true });
       throw error;
     }
   }
 
-  private readonly handleOutputLine = (line: string): void => {
+  private handleOutputLine(floorId: string, line: string): void {
     const message = line.slice(0, MAX_MESSAGE_LENGTH);
-    if (message === this.status.message) return;
-    this.publish({ ...this.status, message });
-  };
+    const current = this.getStatus(floorId);
+    if (message === current.message) return;
+    this.publish(floorId, { ...current, message });
+  }
 
-  private publish(status: RepoStatus): void {
-    this.status = status;
+  private publish(floorId: string, status: RepoStatus): void {
+    this.statuses.set(floorId, status);
     this.listeners.forEach((listener: StatusListener): void => {
       try {
-        listener(status);
+        listener({ floorId, status });
       } catch (error: unknown) {
         logger.error('status listener failed', error);
       }

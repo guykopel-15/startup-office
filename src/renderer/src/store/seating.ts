@@ -1,26 +1,16 @@
-import { create } from 'zustand';
-
-import { DEFAULT_FIGURES, FigureState, STARTING_EXPERIENCE, STARTING_LEVEL, isValidFigureText } from '@shared/figures';
-import { getFurniture, isSeat } from '../game/world/furniture';
-
-import type { StoreApi } from 'zustand';
+import { FigureState, STARTING_EXPERIENCE, STARTING_LEVEL, isValidFigureText } from '@shared/figures';
+import { isSeat } from '../game/world/furniture';
 
 import type { Figure, FigureLook, RoomKey } from '@shared/figures';
 import type { Furniture } from '../game/world/furniture';
 
-/** What the Add figure dialog collects. The store fills in id, desk, state, level and experience. */
+/** What the Add figure dialog collects. Seating fills in id, desk, state, level and experience. */
 export interface NewFigureInput {
   name: string;
   job: string;
   room: RoomKey;
   look: FigureLook;
   rolePrompt: string;
-}
-
-export interface FiguresState {
-  figures: Figure[];
-  /** Returns the new figure, or null when the text is invalid or the room has no free desk. */
-  addFigure: (input: NewFigureInput) => Figure | null;
 }
 
 const ID_SUFFIX_START = 2;
@@ -77,17 +67,14 @@ export function createFigure(input: NewFigureInput, figures: readonly Figure[], 
   };
 }
 
+/** Re-seats a template figure on the first free desk of its room; null when the room is full. */
+export function seatTemplateFigure(template: Figure, figures: readonly Figure[], furniture: readonly Furniture[]): Figure | null {
+  const deskIndex = findFreeDeskIndex(template.room, figures, furniture);
+  if (deskIndex === null) return null;
+  return { ...template, deskIndex, look: { ...template.look } };
+}
+
 /** The first department with a free desk, so the dialog never opens on a full one. */
 export function findRoomWithFreeDesk(rooms: readonly RoomKey[], figures: readonly Figure[], furniture: readonly Furniture[]): RoomKey | undefined {
   return rooms.find((room: RoomKey): boolean => countFreeDesks(room, figures, furniture) > 0);
 }
-
-export const useFiguresStore = create<FiguresState>((set: StoreApi<FiguresState>['setState'], get: StoreApi<FiguresState>['getState']): FiguresState => ({
-  figures: [...DEFAULT_FIGURES],
-  addFigure: (input: NewFigureInput): Figure | null => {
-    const figure = createFigure(input, get().figures, getFurniture());
-    if (figure === null) return null;
-    set({ figures: [...get().figures, figure] });
-    return figure;
-  },
-}));
