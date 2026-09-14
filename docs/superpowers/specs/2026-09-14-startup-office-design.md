@@ -6,10 +6,10 @@ Status: approved by owner, implementation in progress
 ## 1. The idea
 
 Startup Office is a desktop game on macOS that shows a startup as a MapleStory-style
-pixel office. The office is one side-scrolling map divided into rooms, one per
-department. In each room stand pixel figures, one per job. Every figure is a real
-Claude Code agent with its own role prompt. The player is the CEO: a controllable
-avatar who walks the office, talks to figures, gives tasks, and watches work flow.
+pixel office shown whole on one page: an isometric floor plan, one room per department
+around a lobby corridor. In each room sit pixel figures, one per job. Every figure is a real Claude Code agent
+with its own role prompt. The player is the CEO and is not a figure: the CEO watches
+the office from above, clicks figures to talk, gives tasks, and watches work flow.
 
 Pasting a GitHub repo URL in the navbar loads a "new world": the app clones the repo,
 and every figure reads the slice of it that matches its job and reports back.
@@ -21,8 +21,8 @@ and every figure reads the slice of it that matches its job and reports back.
 | 1 | Agent engine | Real `claude` CLI sessions (`claude -p`), one per figure run |
 | 2 | App shell | Electron + React + TypeScript + Vite |
 | 3 | Game engine | Phaser 3 inside the Electron renderer |
-| 4 | Camera | Side-scrolling map, camera follows the CEO avatar |
-| 5 | Task input | NPC dialog (walk up + key) **and** HUD chat box |
+| 4 | Camera | Whole office on one page, isometric floor plan, camera fits world to window (changed 14 Sep after task 2 review) |
+| 5 | Task input | Click a figure for NPC dialog **and** HUD chat box |
 | 6 | Sprites | Original / CC0 pixel art in MapleStory style, no ripped assets |
 | 7 | Persistence | JSON files in Electron `userData`, no database |
 | 8 | Repo | `startup-office` on GitHub, public |
@@ -125,10 +125,10 @@ interface World { repoUrl: string | null; repoPath: string | null; companyName: 
 
 | Element | Behavior |
 |---|---|
-| Map | One wide tilemap, rooms as zones with their own tileset and tint, parallax skyline through windows |
-| CEO avatar | WASD / arrows, 4-direction walk cycle, camera follows with lerp |
+| Map | One 640×360 world drawn procedurally: 48×34 tile isometric plan (2:1 tiles), floor slab with visible sides, 7 rooms + lobby corridor each with its own floor tint and grid, translucent walls with door gaps onto the corridor, depth-sorted |
+| Camera | Fits the world to the window on every resize; no scrolling |
 | Figures | Sit at desk (idle bounce), typing animation while `working`, walk with pathfinding to meeting room when a sprint starts |
-| Interaction | Standing next to a figure shows a "talk" prompt; Enter opens DialogBox |
+| Interaction | Clicking a figure opens DialogBox |
 | Bubbles | Last line of agent output shown as a speech bubble over the figure |
 | Juice | Level-up burst, floating red numbers on `failed`, confetti on sprint close |
 | Sound | Chiptune loop per room, keyboard clatter scaled to active agents, level-up sting |
@@ -160,13 +160,13 @@ One task = one branch = one PR, in order.
 |---|---|---|
 | 0 | Spec + repo | This file, README, GitHub repo |
 | 1 | Electron scaffold | Window opens, React + Vite + TS, navbar shell, Phaser boots an empty scene |
-| 2 | Office map | Tilemap with all rooms, parallax, camera, CEO avatar walks |
-| 3 | Figures | Default figures at desks, idle animation, name tag, click emits event |
+| 2 | Office map | Isometric floor on one page: rooms, corridor, glass walls, doors, app icon |
+| 3 | Figures + desks | Desks per room, one detailed figure per job, idle animation, name tag, click emits event |
 | 4 | Add figure | "+" in navbar: department, job, sprite, role prompt |
 | 5 | Repo intake | Paste URL, clone, status in navbar |
 | 6 | Agent runner | `claude -p` per figure, streamed to AgentPanel, intake run on repo load |
 | 7 | Figure states | idle / working / done / error animations, speech bubbles, desk screens |
-| 8 | NPC dialog + HUD chat | Talk to a figure, give a task, task routes to the assignee |
+| 8 | NPC dialog + HUD chat | Click a figure, give a task, task routes to the assignee |
 | 9 | Meeting room + sprints | Sprint board, figures walk to planning, confetti on close |
 | 10 | XP + juice | Levels, level-up burst, failed numbers, sounds |
 | 11 | Persistence | Figures, tasks, sprints, world survive restart |

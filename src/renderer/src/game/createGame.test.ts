@@ -24,6 +24,6 @@ describe('createGame', () => {
     const config = gameConstructor.mock.calls[0]?.[0] as { parent: HTMLElement; pixelArt: boolean; scene: unknown[] };
     expect(config.parent).toBe(parent);
     expect(config.pixelArt).toBe(true);
-    expect(config.scene).toHaveLength(1);
+    expect(config.scene).toHaveLength(2);
   });
 });

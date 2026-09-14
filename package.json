@@ -1,6 +1,6 @@
 {
   "name": "startup-office",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "MapleStory-style desktop game where every employee is a real Claude Code agent",
   "directories": {
     "doc": "docs"
@@ -11,7 +11,8 @@
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit",
-    "package": "electron-vite build && electron-builder --mac"
+    "package": "electron-vite build && electron-builder --mac",
+    "icon": "node scripts/generateIcon.mts"
   },
   "repository": {
     "type": "git",
