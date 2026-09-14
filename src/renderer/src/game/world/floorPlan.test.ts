@@ -1,4 +1,4 @@
-import { DOOR_WIDTH, PLAN_HEIGHT, PLAN_WIDTH, ROOMS, WallAxis, buildWalls, cutDoor, getRoomCenter } from './floorPlan';
+import { DOOR_WIDTH, PLAN_HEIGHT, PLAN_WIDTH, ROOMS, WallAxis, buildWalls, cutDoor, getRoomCenter, splitWall } from './floorPlan';
 
 import type { GridRect, Room } from './floorPlan';
 
@@ -58,5 +58,16 @@ describe('buildWalls', () => {
   it('does not duplicate shared walls', () => {
     const ids = walls.map((wall) => `${wall.axis}:${wall.line}:${wall.start}-${wall.end}`);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+});
+
+describe('splitWall', () => {
+  it('cuts a wall into pieces that cover it exactly', () => {
+    const pieces = splitWall({ axis: WallAxis.AlongY, line: 3, start: 0, end: 5 }, 2);
+    expect(pieces.map((piece) => [piece.start, piece.end])).toEqual([
+      [0, 2],
+      [2, 4],
+      [4, 5],
+    ]);
   });
 });

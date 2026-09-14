@@ -4,6 +4,7 @@
 
 | Version | Date | Changes |
 |---|---|---|
+| 1.0.2 | 2026-09-14 | **Added:** desks, meeting table and reception desk in the isometric rooms; 16 default chibi figures (one per job) composed from a shared pixel template with hair styles, accessories and per-figure colors; idle bob and blink; name tag that expands to the job on hover; click emits `figure:clicked` on the game event bus |
 | 1.0.1 | 2026-09-14 | **Added:** isometric office floor on one page (7 rooms around a lobby corridor, glass walls, door gaps, floor slab, tile grid), app icon, dev self-screenshot hook. **Changed:** view is an isometric floor plan instead of a side-scroller; the CEO is the player outside the office, not a figure |
 | 1.0.0 | 2026-09-14 | **Added:** design spec, README, coding rules (`CLAUDE.md`), Electron + React + Phaser scaffold, navbar shell, `DSButton` design kit, logger, Vitest setup |
 
@@ -21,6 +22,9 @@ Startup Office runs on your Mac as an Electron app with a Phaser 3 game inside.
 The whole office is on one screen, an isometric floor plan with glass walls:
 
 ![The office floor](docs/images/office-floor.png)
+
+Every figure is drawn from one pixel template plus a hair style, an accessory and its own
+colors, so adding a new employee is a data change, not new art.
 
 | Department | Who works there |
 |---|---|
@@ -102,7 +106,7 @@ One task = one branch = one pull request, built in order.
 | 0 | Spec + repo | Design doc, README, GitHub repo | ✅ |
 | 1 | Electron scaffold | Window opens, React + Vite + TS, navbar shell, empty Phaser scene | ✅ |
 | 2 | Office map | Isometric floor on one page: rooms, corridor, glass walls, doors, app icon | ✅ |
-| 3 | Figures + desks | Desks per room, one detailed figure per job, idle animation, name tag | ☐ |
+| 3 | Figures + desks | Desks per room, one detailed figure per job, idle animation, name tag | ✅ |
 | 4 | Add figure | `+` in navbar: department, job, sprite, role prompt | ☐ |
 | 5 | Repo intake | Paste URL, clone, status in navbar | ☐ |
 | 6 | Agent runner | `claude -p` per figure, streamed to a panel, intake run on repo load | ☐ |

@@ -1,15 +1,8 @@
+import { RoomKey } from '@shared/figures';
+
 import type { GridPoint } from './isoProjection';
 
-export enum RoomKey {
-  Lobby = 'lobby',
-  ResearchAndDevelopment = 'rnd',
-  Product = 'product',
-  MeetingRoom = 'meeting',
-  Marketing = 'marketing',
-  Sales = 'sales',
-  Finance = 'finance',
-  Operations = 'ops',
-}
+export { RoomKey };
 
 /** A rectangle of floor tiles: gx0..gx1 by gy0..gy1, end exclusive. */
 export interface GridRect {
@@ -121,6 +114,15 @@ export function buildWalls(rooms: readonly Room[]): WallSegment[] {
     walls.push({ axis: WallAxis.AlongY, line: corridor.gx1, start: corridor.gy0, end: corridor.gy1 });
   }
   return walls;
+}
+
+/** Splits a wall into pieces no longer than `pieceLength` so each can be depth-sorted on its own. */
+export function splitWall(wall: WallSegment, pieceLength: number): WallSegment[] {
+  const pieces: WallSegment[] = [];
+  for (let start = wall.start; start < wall.end; start += pieceLength) {
+    pieces.push({ ...wall, start, end: Math.min(start + pieceLength, wall.end) });
+  }
+  return pieces;
 }
 
 export function getWallEndpoints(wall: WallSegment): [GridPoint, GridPoint] {

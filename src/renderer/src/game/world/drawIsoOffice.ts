@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 
 import { GAME_FONT_FAMILY } from '@shared/theme';
-import { PLAN_HEIGHT, PLAN_WIDTH, ROOMS, buildWalls, getRoomCenter, getRoomCorners, getWallEndpoints, getWallMidpoint } from './floorPlan';
+import { PLAN_HEIGHT, PLAN_WIDTH, ROOMS, buildWalls, getRoomCenter, getRoomCorners, getWallEndpoints, getWallMidpoint, splitWall } from './floorPlan';
 import { getDepth, projectToScreen } from './isoProjection';
 
 import type { Room, WallSegment } from './floorPlan';
@@ -31,6 +31,7 @@ const WALL_BASE_ALPHA = 0.5;
 const WALL_POST_COLOR = 0xe6e2ff;
 const WALL_POST_ALPHA = 0.5;
 const CORNER_POST_WIDTH = 1;
+const WALL_PIECE_LENGTH = 1;
 
 const LABEL_FONT_SIZE = '7px';
 const LABEL_COLOR = '#f1ecff';
@@ -39,18 +40,20 @@ const LABEL_RESOLUTION = 4;
 const CORRIDOR_LABEL_GX = 6;
 const HALF = 0.5;
 
-/** Renders the whole plan into a container so the scene can center it as one object. */
-export function drawIsoOffice(scene: Phaser.Scene): Phaser.GameObjects.Container {
-  const container = scene.add.container(0, 0);
-  const floors = scene.add.graphics();
+/** Everything on the ground draws below anything standing on it. */
+export const DEPTH_FLOOR = -1000;
+export const DEPTH_LABEL = -900;
+
+/** Floors, labels and walls, positioned at `origin` and depth-sorted with figures and furniture. */
+export function drawIsoOffice(scene: Phaser.Scene, origin: ScreenPoint): void {
+  const floors = scene.add.graphics({ x: origin.x, y: origin.y }).setDepth(DEPTH_FLOOR);
   drawSlab(floors);
   ROOMS.forEach((room) => drawFloor(floors, room));
-  container.add(floors);
-  ROOMS.forEach((room) => container.add(createLabel(scene, room)));
-  const walls = scene.add.graphics();
-  sortByDepth(buildWalls(ROOMS)).forEach((wall) => drawWall(walls, wall));
-  container.add(walls);
-  return container;
+  ROOMS.forEach((room) => createLabel(scene, origin, room));
+  buildWalls(ROOMS).forEach((wall) => {
+    const pieces = splitWall(wall, WALL_PIECE_LENGTH);
+    pieces.forEach((piece, index) => drawWall(scene, origin, piece, index === 0, index === pieces.length - 1));
+  });
 }
 
 function toPolygon(points: readonly GridPoint[]): ScreenPoint[] {
@@ -78,10 +81,10 @@ function drawSlab(graphics: Phaser.GameObjects.Graphics): void {
 }
 
 function drawFloor(graphics: Phaser.GameObjects.Graphics, room: Room): void {
-  const corners = toPolygon(getRoomCorners(room));
-  fillPolygon(graphics, corners, room.floorColor, FLOOR_ALPHA);
+  const cornersOnScreen = toPolygon(getRoomCorners(room));
+  fillPolygon(graphics, cornersOnScreen, room.floorColor, FLOOR_ALPHA);
   drawFloorGrid(graphics, room);
-  strokePolygon(graphics, corners, FLOOR_BORDER_COLOR, FLOOR_BORDER_ALPHA);
+  strokePolygon(graphics, cornersOnScreen, FLOOR_BORDER_COLOR, FLOOR_BORDER_ALPHA);
 }
 
 function drawFloorGrid(graphics: Phaser.GameObjects.Graphics, room: Room): void {
@@ -100,20 +103,19 @@ function strokeGridLine(graphics: Phaser.GameObjects.Graphics, from: GridPoint, 
   graphics.lineBetween(start.x, start.y, end.x, end.y);
 }
 
-function sortByDepth(walls: readonly WallSegment[]): WallSegment[] {
-  return [...walls].sort((first, second) => getDepth(getWallMidpoint(first)) - getDepth(getWallMidpoint(second)));
-}
-
-function drawWall(graphics: Phaser.GameObjects.Graphics, wall: WallSegment): void {
+/** Each wall is its own Graphics so figures and desks can sit in front of or behind it. */
+function drawWall(scene: Phaser.Scene, origin: ScreenPoint, wall: WallSegment, hasStartPost: boolean, hasEndPost: boolean): void {
+  const graphics = scene.add.graphics({ x: origin.x, y: origin.y }).setDepth(getDepth(getWallMidpoint(wall)));
   const [fromGrid, toGrid] = getWallEndpoints(wall);
-  const base = [projectToScreen(fromGrid), projectToScreen(toGrid)] as const;
+  const from = projectToScreen(fromGrid);
+  const to = projectToScreen(toGrid);
   const raise = (point: ScreenPoint): ScreenPoint => ({ x: point.x, y: point.y - WALL_HEIGHT });
-  const [from, to] = base;
   fillPolygon(graphics, [from, to, raise(to), raise(from)], WALL_FILL_COLOR, WALL_FILL_ALPHA);
   graphics.lineStyle(1, WALL_BASE_COLOR, WALL_BASE_ALPHA).lineBetween(from.x, from.y, to.x, to.y);
   graphics.lineStyle(1, WALL_TOP_COLOR, WALL_TOP_ALPHA).lineBetween(raise(from).x, raise(from).y, raise(to).x, raise(to).y);
-  graphics.fillStyle(WALL_POST_COLOR, WALL_POST_ALPHA).fillRect(from.x - CORNER_POST_WIDTH * HALF, from.y - WALL_HEIGHT, CORNER_POST_WIDTH, WALL_HEIGHT);
-  graphics.fillRect(to.x - CORNER_POST_WIDTH * HALF, to.y - WALL_HEIGHT, CORNER_POST_WIDTH, WALL_HEIGHT);
+  graphics.fillStyle(WALL_POST_COLOR, WALL_POST_ALPHA);
+  if (hasStartPost) graphics.fillRect(from.x - CORNER_POST_WIDTH * HALF, from.y - WALL_HEIGHT, CORNER_POST_WIDTH, WALL_HEIGHT);
+  if (hasEndPost) graphics.fillRect(to.x - CORNER_POST_WIDTH * HALF, to.y - WALL_HEIGHT, CORNER_POST_WIDTH, WALL_HEIGHT);
 }
 
 function getLabelAnchor(room: Room): GridPoint {
@@ -121,10 +123,11 @@ function getLabelAnchor(room: Room): GridPoint {
   return room.isCorridor ? { gx: CORRIDOR_LABEL_GX, gy: center.gy } : center;
 }
 
-function createLabel(scene: Phaser.Scene, room: Room): Phaser.GameObjects.Text {
+function createLabel(scene: Phaser.Scene, origin: ScreenPoint, room: Room): void {
   const center = projectToScreen(getLabelAnchor(room));
-  return scene.add
-    .text(center.x, center.y, room.name, { fontFamily: GAME_FONT_FAMILY, fontSize: LABEL_FONT_SIZE, color: LABEL_COLOR, fontStyle: 'bold', resolution: LABEL_RESOLUTION })
+  scene.add
+    .text(origin.x + center.x, origin.y + center.y, room.name, { fontFamily: GAME_FONT_FAMILY, fontSize: LABEL_FONT_SIZE, color: LABEL_COLOR, fontStyle: 'bold', resolution: LABEL_RESOLUTION })
     .setOrigin(HALF, HALF)
-    .setAlpha(LABEL_ALPHA);
+    .setAlpha(LABEL_ALPHA)
+    .setDepth(DEPTH_LABEL);
 }
