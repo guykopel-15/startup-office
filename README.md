@@ -1,5 +1,11 @@
 # Startup Office
 
+## Version History
+
+| Version | Date | Changes |
+|---|---|---|
+| 1.0.0 | 2026-09-14 | **Added:** design spec, README, coding rules (`CLAUDE.md`), Electron + React + Phaser scaffold, navbar shell, `DSButton` design kit, logger, Vitest setup |
+
 A MapleStory-style desktop game where your startup is a pixel office and every
 employee is a real Claude Code agent. You are the CEO. Walk the office, talk to
 your team, hand out tasks, and watch the work flow from room to room.

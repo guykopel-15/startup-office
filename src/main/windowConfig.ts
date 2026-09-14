@@ -1,0 +1,8 @@
+import { THEME_COLORS } from '../shared/theme';
+
+export const WINDOW_TITLE = 'Startup Office';
+export const WINDOW_DEFAULT_WIDTH = 1440;
+export const WINDOW_DEFAULT_HEIGHT = 900;
+export const WINDOW_MIN_WIDTH = 1024;
+export const WINDOW_MIN_HEIGHT = 640;
+export const WINDOW_BACKGROUND_COLOR = THEME_COLORS.background;

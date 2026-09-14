@@ -1,26 +1,37 @@
 import Phaser from 'phaser';
 
+import { GAME_FONT_FAMILY, THEME_COLORS } from '@shared/theme';
+
+export const BOOT_SCENE_KEY = 'boot';
+const TITLE_TEXT = 'STARTUP OFFICE';
+const SUBTITLE_TEXT = 'office map coming in task 2';
+const TITLE_FONT_SIZE = '32px';
+const SUBTITLE_FONT_SIZE = '14px';
+const SUBTITLE_OFFSET_Y = 40;
+const CENTER_ORIGIN = 0.5;
+
 /** Empty starting scene. Task 2 replaces this with the office map. */
 export class BootScene extends Phaser.Scene {
   constructor() {
-    super('boot');
+    super(BOOT_SCENE_KEY);
   }
 
   create(): void {
-    const { width, height } = this.scale;
+    const centerX = this.scale.width / 2;
+    const centerY = this.scale.height / 2;
     this.add
-      .text(width / 2, height / 2, 'STARTUP OFFICE', {
-        fontFamily: 'monospace',
-        fontSize: '32px',
-        color: '#ffd866',
+      .text(centerX, centerY, TITLE_TEXT, {
+        fontFamily: GAME_FONT_FAMILY,
+        fontSize: TITLE_FONT_SIZE,
+        color: THEME_COLORS.accent,
       })
-      .setOrigin(0.5);
+      .setOrigin(CENTER_ORIGIN);
     this.add
-      .text(width / 2, height / 2 + 40, 'office map coming in task 2', {
-        fontFamily: 'monospace',
-        fontSize: '14px',
-        color: '#8a7fb3',
+      .text(centerX, centerY + SUBTITLE_OFFSET_Y, SUBTITLE_TEXT, {
+        fontFamily: GAME_FONT_FAMILY,
+        fontSize: SUBTITLE_FONT_SIZE,
+        color: THEME_COLORS.muted,
       })
-      .setOrigin(0.5);
+      .setOrigin(CENTER_ORIGIN);
   }
 }

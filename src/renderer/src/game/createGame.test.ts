@@ -1,11 +1,11 @@
 import { vi } from 'vitest';
 
-const gameCtor = vi.fn();
+const gameConstructor = vi.fn();
 vi.mock('phaser', () => ({
   default: {
     Game: class {
       constructor(config: unknown) {
-        gameCtor(config);
+        gameConstructor(config);
       }
     },
     AUTO: 0,
@@ -20,8 +20,8 @@ describe('createGame', () => {
   it('boots Phaser into the given parent with pixel art on', () => {
     const parent = document.createElement('div');
     createGame(parent);
-    expect(gameCtor).toHaveBeenCalledTimes(1);
-    const config = gameCtor.mock.calls[0]?.[0] as { parent: HTMLElement; pixelArt: boolean; scene: unknown[] };
+    expect(gameConstructor).toHaveBeenCalledTimes(1);
+    const config = gameConstructor.mock.calls[0]?.[0] as { parent: HTMLElement; pixelArt: boolean; scene: unknown[] };
     expect(config.parent).toBe(parent);
     expect(config.pixelArt).toBe(true);
     expect(config.scene).toHaveLength(1);

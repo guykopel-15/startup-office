@@ -65,7 +65,7 @@ body,
   -webkit-app-region: no-drag;
 }
 
-.btn {
+.ds-button {
   font: inherit;
   font-size: 12px;
   padding: 6px 12px;
@@ -76,12 +76,12 @@ body,
   cursor: pointer;
 }
 
-.btn:hover:not(:disabled) {
+.ds-button:hover:not(:disabled) {
   border-color: var(--accent);
   color: var(--accent);
 }
 
-.btn:disabled {
+.ds-button:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
@@ -93,4 +93,10 @@ body,
 
 .game-canvas canvas {
   display: block;
+}
+
+.ds-button--primary {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
 }
