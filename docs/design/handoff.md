@@ -53,7 +53,8 @@ Palette (hex):
 None — static illustration. (Optional future: hover-highlight per room, or subtle screen-flicker/LED-blink animations.)
 
 ## Files
-- `Pixel Office Rooms.dc.html` — the furnished L-shaped floor (primary deliverable). Markup between `<x-dc>` tags is plain HTML with inline styles.
-- `Pixel Office Scene.dc.html` — earlier structure-only version (7 empty rooms, rectangular plate), kept for reference.
+The HTML prototypes (`Pixel Office Rooms.dc.html`, `Pixel Office Scene.dc.html`) stay in the owner's design tool and are not committed. This render of the furnished floor is the reference kept in the repo:
+
+![Rendered handoff](handoff-rooms.png)
 
 Open either file in a browser to view. All geometry is inline-styled divs; no JS is required for the scene itself.

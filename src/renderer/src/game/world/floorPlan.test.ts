@@ -1,6 +1,8 @@
-import { DOOR_WIDTH, PLAN_HEIGHT, PLAN_WIDTH, ROOMS, WallAxis, buildWalls, cutDoor, getRoomCenter, splitWall } from './floorPlan';
+import { DOOR_WIDTH, PLAN_HEIGHT, PLAN_WIDTH, ROOMS, WallAxis, buildWalls, cutDoor, splitWall } from './floorPlan';
+import { getRectCenter } from './isoProjection';
 
-import type { GridRect, Room } from './floorPlan';
+import type { Room, WallSegment } from './floorPlan';
+import type { GridRect } from './isoProjection';
 
 function area(rect: GridRect): number {
   return (rect.gx1 - rect.gx0) * (rect.gy1 - rect.gy0);
@@ -12,18 +14,18 @@ function overlaps(first: GridRect, second: GridRect): boolean {
 
 describe('ROOMS', () => {
   it('tile the whole plan with no gaps or overlaps', () => {
-    const total = ROOMS.reduce((sum, room) => sum + area(room), 0);
+    const total = ROOMS.reduce((sum: number, room: Room): number => sum + area(room), 0);
     expect(total).toBe(PLAN_WIDTH * PLAN_HEIGHT);
-    ROOMS.forEach((room, index) => {
-      ROOMS.slice(index + 1).forEach((other) => expect(overlaps(room, other)).toBe(false));
+    ROOMS.forEach((room: Room, index: number): void => {
+      ROOMS.slice(index + 1).forEach((other: Room): void => expect(overlaps(room, other)).toBe(false));
     });
   });
 
   it('has exactly one corridor and every room touches it', () => {
-    const corridors = ROOMS.filter((room) => room.isCorridor);
+    const corridors = ROOMS.filter((room: Room): boolean => room.isCorridor);
     expect(corridors).toHaveLength(1);
     const corridor = corridors[0] as Room;
-    ROOMS.filter((room) => !room.isCorridor).forEach((room) => {
+    ROOMS.filter((room: Room): boolean => !room.isCorridor).forEach((room: Room): void => {
       const isTouching = room.gy1 === corridor.gy0 || room.gy0 === corridor.gy1;
       expect(isTouching).toBe(true);
     });
@@ -44,19 +46,19 @@ describe('buildWalls', () => {
   const walls = buildWalls(ROOMS);
 
   it('gives every room a door onto the corridor', () => {
-    const corridor = ROOMS.find((room) => room.isCorridor) as Room;
-    ROOMS.filter((room) => !room.isCorridor).forEach((room) => {
+    const corridor = ROOMS.find((room: Room): boolean => room.isCorridor) as Room;
+    ROOMS.filter((room: Room): boolean => !room.isCorridor).forEach((room: Room): void => {
       const doorLine = room.gy1 === corridor.gy0 ? corridor.gy0 : corridor.gy1;
-      const center = getRoomCenter(room).gx;
-      const isBlocked = walls.some((wall) => wall.axis === WallAxis.AlongX && wall.line === doorLine && wall.start < center && wall.end > center);
+      const center = getRectCenter(room).gx;
+      const isBlocked = walls.some((wall: WallSegment): boolean => wall.axis === WallAxis.AlongX && wall.line === doorLine && wall.start < center && wall.end > center);
       expect(isBlocked).toBe(false);
-      const hasJamb = walls.some((wall) => wall.axis === WallAxis.AlongX && wall.line === doorLine && wall.end === center - DOOR_WIDTH / 2);
+      const hasJamb = walls.some((wall: WallSegment): boolean => wall.axis === WallAxis.AlongX && wall.line === doorLine && wall.end === center - DOOR_WIDTH / 2);
       expect(hasJamb).toBe(true);
     });
   });
 
   it('does not duplicate shared walls', () => {
-    const ids = walls.map((wall) => `${wall.axis}:${wall.line}:${wall.start}-${wall.end}`);
+    const ids = walls.map((wall: WallSegment): string => `${wall.axis}:${wall.line}:${wall.start}-${wall.end}`);
     expect(new Set(ids).size).toBe(ids.length);
   });
 });
@@ -64,7 +66,7 @@ describe('buildWalls', () => {
 describe('splitWall', () => {
   it('cuts a wall into pieces that cover it exactly', () => {
     const pieces = splitWall({ axis: WallAxis.AlongY, line: 3, start: 0, end: 5 }, 2);
-    expect(pieces.map((piece) => [piece.start, piece.end])).toEqual([
+    expect(pieces.map((piece: WallSegment): number[] => [piece.start, piece.end])).toEqual([
       [0, 2],
       [2, 4],
       [4, 5],

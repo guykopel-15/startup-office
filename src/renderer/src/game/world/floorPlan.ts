@@ -1,16 +1,7 @@
 import { RoomKey } from '@shared/figures';
+import { HALF } from '@shared/theme';
 
-import type { GridPoint } from './isoProjection';
-
-export { RoomKey };
-
-/** A rectangle of floor tiles: gx0..gx1 by gy0..gy1, end exclusive. */
-export interface GridRect {
-  gx0: number;
-  gy0: number;
-  gx1: number;
-  gy1: number;
-}
+import type { GridRect } from './isoProjection';
 
 export enum FloorKind {
   Tile = 'tile',
@@ -41,6 +32,7 @@ export interface WallSegment {
 
 export const PLAN_WIDTH = 48;
 export const PLAN_HEIGHT = 34;
+export const PLAN_RECT: GridRect = { gx0: 0, gy0: 0, gx1: PLAN_WIDTH, gy1: PLAN_HEIGHT };
 export const DOOR_WIDTH = 3;
 export const TOP_ROW_END = 14;
 export const CORRIDOR_END = 19;
@@ -57,22 +49,9 @@ export const ROOMS: readonly Room[] = [
 ];
 
 export function findRoom(key: RoomKey): Room {
-  const room = ROOMS.find((candidate) => candidate.key === key);
+  const room = ROOMS.find((candidate: Room): boolean => candidate.key === key);
   if (room === undefined) throw new Error(`Unknown room "${key}"`);
   return room;
-}
-
-export function getRoomCorners(rect: GridRect): GridPoint[] {
-  return [
-    { gx: rect.gx0, gy: rect.gy0 },
-    { gx: rect.gx1, gy: rect.gy0 },
-    { gx: rect.gx1, gy: rect.gy1 },
-    { gx: rect.gx0, gy: rect.gy1 },
-  ];
-}
-
-export function getRoomCenter(rect: GridRect): GridPoint {
-  return { gx: (rect.gx0 + rect.gx1) / 2, gy: (rect.gy0 + rect.gy1) / 2 };
 }
 
 /** Turns a room-relative rect into plan coordinates. */
@@ -96,13 +75,13 @@ export function getRectEdges(rect: GridRect): WallSegment[] {
 
 /** Cuts a centered door gap out of a wall, returning the remaining pieces. */
 export function cutDoor(wall: WallSegment, doorWidth: number): WallSegment[] {
-  const center = (wall.start + wall.end) / 2;
-  const gapStart = center - doorWidth / 2;
-  const gapEnd = center + doorWidth / 2;
+  const center = (wall.start + wall.end) * HALF;
+  const gapStart = center - doorWidth * HALF;
+  const gapEnd = center + doorWidth * HALF;
   return [
     { ...wall, end: gapStart },
     { ...wall, start: gapEnd },
-  ].filter((piece) => piece.end > piece.start);
+  ].filter((piece: WallSegment): boolean => piece.end > piece.start);
 }
 
 function isCorridorEdge(corridor: Room, edge: WallSegment): boolean {
@@ -112,13 +91,13 @@ function isCorridorEdge(corridor: Room, edge: WallSegment): boolean {
 
 /** Every wall in the plan, deduplicated where rooms touch, with a door where a room meets the corridor. */
 export function buildWalls(rooms: readonly Room[]): WallSegment[] {
-  const corridor = rooms.find((room) => room.isCorridor);
+  const corridor = rooms.find((room: Room): boolean => room.isCorridor);
   const seen = new Set<string>();
   const walls: WallSegment[] = [];
   rooms
-    .filter((room) => !room.isCorridor)
-    .forEach((room) => {
-      getRectEdges(room).forEach((edge) => {
+    .filter((room: Room): boolean => !room.isCorridor)
+    .forEach((room: Room): void => {
+      getRectEdges(room).forEach((edge: WallSegment): void => {
         if (seen.has(wallId(edge))) return;
         seen.add(wallId(edge));
         const hasDoor = corridor !== undefined && isCorridorEdge(corridor, edge);
@@ -139,22 +118,4 @@ export function splitWall(wall: WallSegment, pieceLength: number): WallSegment[]
     pieces.push({ ...wall, start, end: Math.min(start + pieceLength, wall.end) });
   }
   return pieces;
-}
-
-export function getWallEndpoints(wall: WallSegment): [GridPoint, GridPoint] {
-  if (wall.axis === WallAxis.AlongX) {
-    return [
-      { gx: wall.start, gy: wall.line },
-      { gx: wall.end, gy: wall.line },
-    ];
-  }
-  return [
-    { gx: wall.line, gy: wall.start },
-    { gx: wall.line, gy: wall.end },
-  ];
-}
-
-export function getWallMidpoint(wall: WallSegment): GridPoint {
-  const [from, to] = getWallEndpoints(wall);
-  return { gx: (from.gx + to.gx) / 2, gy: (from.gy + to.gy) / 2 };
 }

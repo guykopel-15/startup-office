@@ -6,6 +6,9 @@ export const THEME_COLORS = {
   text: '#f1ecff',
   muted: '#8a7fb3',
   accent: '#ffd866',
+  /** Darkest ink: outlines, baseboards, deep shadows. */
+  ink: '#0e0a1a',
 } as const;
 
 export const GAME_FONT_FAMILY = 'monospace';
+export const HALF = 0.5;

@@ -13,7 +13,7 @@ Verify compliance before every commit.
 
 ## Naming
 
-- camelCase for variables, functions, and file names. Always full names, never abbreviations
+- camelCase for variables, functions, and file names. Always full names, never abbreviations. One exception: isometric grid coordinates are `gx`/`gy` (`gx0`/`gy1` for rect edges), because they appear in every geometry line
 - PascalCase for classes, interfaces, types, enums (React component files are PascalCase to match their export)
 - UPPER_SNAKE_CASE for constants
 - Boolean variables must start with `is`, `has`, `can`, `should`

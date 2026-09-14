@@ -7,7 +7,6 @@ export const PALETTE = {
   wallTop: 0x7b96bd,
   wallSouth: 0x5877a3,
   wallEast: 0x44608a,
-  wallEastDark: 0x3f597f,
   wallBaseboard: 0x31486b,
   rimTop: 0x7b96bd,
   rimSouth: 0x3f597f,
@@ -17,7 +16,6 @@ export const PALETTE = {
   floorOrange: 0xcf7a35,
   floorCheckerLight: 0xb9c1cd,
   floorCheckerDark: 0x9aa4b4,
-  floorDark: 0x3c4a63,
   corridor: 0x5c6f8d,
   corridorRunner: 0x516481,
   slabSide: 0x2a3a58,
@@ -33,8 +31,6 @@ export const PALETTE = {
 
   chairTop: 0x3c5a8c,
   chairSide: 0x314971,
-  executiveChairTop: 0x2f3d5c,
-  executiveChairSide: 0x26324c,
   stoolTop: 0xd9963f,
   stoolSide: 0xb3782c,
 

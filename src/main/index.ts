@@ -16,7 +16,7 @@ import {
 } from './windowConfig';
 
 const logger = createLogger('main');
-const config = readConfig();
+const config = readConfig(app.isPackaged);
 
 function createWindow(): BrowserWindow {
   const mainWindow = new BrowserWindow({

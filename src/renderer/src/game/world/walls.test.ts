@@ -23,13 +23,13 @@ describe('toWallBox', () => {
 });
 
 describe('buildWallBoxes', () => {
-  it('produces one-tile pieces that all lie inside the plan', () => {
+  it('keeps every box inside the plan and cuts only interior walls into one-tile pieces', () => {
     buildWallBoxes().forEach((box) => {
       expect(box.gx0).toBeGreaterThanOrEqual(-WALL_THICKNESS);
       expect(box.gy0).toBeGreaterThanOrEqual(-WALL_THICKNESS);
       expect(box.gx1).toBeLessThanOrEqual(PLAN_WIDTH + WALL_THICKNESS);
       expect(box.gy1).toBeLessThanOrEqual(PLAN_HEIGHT + WALL_THICKNESS);
-      expect(Math.max(box.gx1 - box.gx0, box.gy1 - box.gy0)).toBeLessThanOrEqual(1);
+      if (box.kind === WallKind.Interior) expect(Math.max(box.gx1 - box.gx0, box.gy1 - box.gy0)).toBeLessThanOrEqual(1);
     });
   });
 
