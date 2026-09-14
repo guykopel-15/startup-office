@@ -3,7 +3,7 @@ import { Accessory, HairStyle } from '@shared/figures';
 /**
  * Pixel rows for the chibi figure. Tokens map to palette colors in composeFigure:
  * D outline, H hair, h hair highlight, S skin, s skin shade, E eye, W eye light,
- * R blush, M mouth, T top, t top shade, P pants, B shoes, A accessory, . transparent.
+ * R blush, M mouth, T top, t top shade, P pants, B shoes, A accessory, C cap, . transparent.
  */
 export const FIGURE_WIDTH = 18;
 export const FIGURE_HEIGHT = 26;
@@ -56,7 +56,7 @@ const SPIKY_HAIR: Overlay = {
 
 const LONG_HAIR: Overlay = {
   offsetY: 5,
-  rows: ['DHH............HHD', 'DHH............HHD', 'DHH............HHD', 'DHH............HHD', 'DHH............HHD', 'DHH............HHD', 'DHH............HHD', 'DHh............hHD', '.DD............DD.'],
+  rows: ['DHH............HHD', 'DHH............HHD', 'DHH............HHD', 'DHH............HHD', 'DHH............HHD', 'DHH............HHD', 'DHH............HHD', 'DHD............DHD', '.DD............DD.'],
 };
 
 const BUN_HAIR: Overlay = {
@@ -66,7 +66,7 @@ const BUN_HAIR: Overlay = {
 
 const CAP_HAIR: Overlay = {
   offsetY: 0,
-  rows: ['.....DDDDDDDD.....', '....DAAAAAAAAD....', '...DAAAAAAAAAAD...', '..DAAAAAAAAAAAAD..', '..DAAAAAAAAAAAAD..', '.DDDDDDDDDDDDDDDD.', '.DAAAAAAAAAAAAAAD.'],
+  rows: ['.....DDDDDDDD.....', '....DCCCCCCCCD....', '...DCCCCCCCCCCD...', '..DCCCCCCCCCCCCD..', '..DCCCCCCCCCCCCD..', '.DDDDDDDDDDDDDDDD.', '.DCCCCCCCCCCCCCCD.'],
 };
 
 const GLASSES: Overlay = {

@@ -13,7 +13,7 @@ Verify compliance before every commit.
 
 ## Naming
 
-- camelCase for variables, functions, and file names. Always full names, never abbreviations
+- camelCase for variables, functions, and file names. Always full names, never abbreviations. One exception: isometric grid coordinates are `gx`/`gy` (`gx0`/`gy1` for rect edges), because they appear in every geometry line
 - PascalCase for classes, interfaces, types, enums (React component files are PascalCase to match their export)
 - UPPER_SNAKE_CASE for constants
 - Boolean variables must start with `is`, `has`, `can`, `should`
@@ -63,7 +63,7 @@ Verify compliance before every commit.
 - TanStack Query for all data that comes from the main process
 - Context for global session state only, `useState` for local UI state
 - All UI components come from the design kit (`src/renderer/src/designKit/`). Every component has a `DS` prefix. If a component doesn't exist, create it there first. No raw HTML controls (`button`, `input`, `select`) used directly in pages or panels
-- Everything in the renderer must be responsive — from a full-screen window down to the 1024px minimum window width, degrading smoothly. Relative units, flex/grid wrapping, no fixed widths that overflow, no horizontal scroll. The Phaser canvas fills whatever space the HUD leaves it
+- Everything in the renderer must be responsive — from a full-screen window down to a 300px wide window, degrading smoothly. Relative units, flex/grid wrapping, no fixed widths that overflow, no horizontal scroll. The Phaser canvas fills whatever space the HUD leaves it
 
 ## Releases
 
