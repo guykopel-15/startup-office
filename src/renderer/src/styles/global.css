@@ -6,6 +6,8 @@
   --muted: #8a7fb3;
   --accent: #ffd866;
   --navbar-h: 48px;
+  --traffic-lights-w: 80px;
+  --narrow-navbar: 560px;
 }
 
 * {
@@ -35,7 +37,9 @@ body,
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px 0 88px; /* room for macOS traffic lights */
+  padding: 0 16px 0 calc(var(--traffic-lights-w) + 8px); /* room for macOS traffic lights */
+  gap: 8px;
+  min-width: 0;
   background: var(--panel);
   border-bottom: 2px solid var(--border);
   -webkit-app-region: drag;
@@ -45,6 +49,8 @@ body,
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .navbar__logo {
@@ -57,12 +63,46 @@ body,
   letter-spacing: 0.08em;
   text-transform: uppercase;
   font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .navbar__actions {
   display: flex;
   gap: 8px;
+  flex-shrink: 0;
   -webkit-app-region: no-drag;
+}
+
+.ds-button__icon {
+  display: none;
+}
+
+/* Narrow windows: icon-only buttons, no title text. */
+@media (max-width: 560px) {
+  .navbar__title {
+    display: none;
+  }
+
+  .ds-button__label {
+    display: none;
+  }
+
+  .ds-button__icon {
+    display: inline;
+  }
+
+  .ds-button {
+    min-width: 32px;
+    padding: 6px 8px;
+  }
+}
+
+@media (max-width: 360px) {
+  .navbar {
+    padding-right: 8px;
+  }
 }
 
 .ds-button {

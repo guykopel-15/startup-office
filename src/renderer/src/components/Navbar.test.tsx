@@ -11,6 +11,6 @@ describe('Navbar', () => {
   it('has the repo and add-figure buttons disabled until their tasks land', () => {
     render(<Navbar />);
     expect(screen.getByRole('button', { name: 'Load repo' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: '+ Figure' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Add figure' })).toBeDisabled();
   });
 });

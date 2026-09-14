@@ -125,7 +125,7 @@ interface World { repoUrl: string | null; repoPath: string | null; companyName: 
 
 | Element | Behavior |
 |---|---|
-| Map | One 640×360 world drawn procedurally: 48×34 tile isometric plan (2:1 tiles), floor slab with visible sides, 7 rooms + lobby corridor each with its own floor tint and grid, translucent walls with door gaps onto the corridor, depth-sorted |
+| Map | One 640×360 world drawn procedurally: 48×34 tile isometric plan (2:1 tiles). Geometry and palette follow the owner's design handoff (`docs/design/`): far walls tall and opaque with windows, near edges low rims, interior walls 0.6 tile thick with door gaps, per-room floors (tile, orange, checker, corridor runner), wall decor (whiteboard, charts, sticky notes, posters), furniture kits per department. Every wall piece, furniture piece and figure is its own depth-sorted object |
 | Camera | Fits the world to the window on every resize; no scrolling |
 | Figures | Sit at desk (idle bounce), typing animation while `working`, walk with pathfinding to meeting room when a sprint starts |
 | Interaction | Clicking a figure opens DialogBox |
@@ -162,12 +162,13 @@ One task = one branch = one PR, in order.
 | 1 | Electron scaffold | Window opens, React + Vite + TS, navbar shell, Phaser boots an empty scene |
 | 2 | Office map | Isometric floor on one page: rooms, corridor, glass walls, doors, app icon |
 | 3 | Figures + desks | Desks per room, one detailed figure per job, idle animation, name tag, click emits event |
+| 4 | Office style | Rebuild to the owner's design package: opaque walls, windows, decor, floors, furniture kits |
 | 4 | Add figure | "+" in navbar: department, job, sprite, role prompt |
-| 5 | Repo intake | Paste URL, clone, status in navbar |
-| 6 | Agent runner | `claude -p` per figure, streamed to AgentPanel, intake run on repo load |
-| 7 | Figure states | idle / working / done / error animations, speech bubbles, desk screens |
-| 8 | NPC dialog + HUD chat | Click a figure, give a task, task routes to the assignee |
-| 9 | Meeting room + sprints | Sprint board, figures walk to planning, confetti on close |
-| 10 | XP + juice | Levels, level-up burst, failed numbers, sounds |
-| 11 | Persistence | Figures, tasks, sprints, world survive restart |
-| 12 | Polish + README | Screenshots, GIF, packaging with electron-builder |
+| 6 | Repo intake | Paste URL, clone, status in navbar |
+| 7 | Agent runner | `claude -p` per figure, streamed to AgentPanel, intake run on repo load |
+| 8 | Figure states | idle / working / done / error animations, speech bubbles, desk screens |
+| 9 | NPC dialog + HUD chat | Click a figure, give a task, task routes to the assignee |
+| 10 | Meeting room + sprints | Sprint board, figures walk to planning, confetti on close |
+| 11 | XP + juice | Levels, level-up burst, failed numbers, sounds |
+| 12 | Persistence | Figures, tasks, sprints, world survive restart |
+| 13 | Polish + README | Screenshots, GIF, packaging with electron-builder |

@@ -63,7 +63,7 @@ Verify compliance before every commit.
 - TanStack Query for all data that comes from the main process
 - Context for global session state only, `useState` for local UI state
 - All UI components come from the design kit (`src/renderer/src/designKit/`). Every component has a `DS` prefix. If a component doesn't exist, create it there first. No raw HTML controls (`button`, `input`, `select`) used directly in pages or panels
-- Everything in the renderer must be responsive — from a full-screen window down to the 1024px minimum window width, degrading smoothly. Relative units, flex/grid wrapping, no fixed widths that overflow, no horizontal scroll. The Phaser canvas fills whatever space the HUD leaves it
+- Everything in the renderer must be responsive — from a full-screen window down to a 300px wide window, degrading smoothly. Relative units, flex/grid wrapping, no fixed widths that overflow, no horizontal scroll. The Phaser canvas fills whatever space the HUD leaves it
 
 ## Releases
 

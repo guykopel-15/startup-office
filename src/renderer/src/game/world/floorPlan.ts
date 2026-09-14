@@ -12,11 +12,17 @@ export interface GridRect {
   gy1: number;
 }
 
+export enum FloorKind {
+  Tile = 'tile',
+  Orange = 'orange',
+  Checker = 'checker',
+  Corridor = 'corridor',
+}
+
 export interface Room extends GridRect {
   key: RoomKey;
   name: string;
-  floorColor: number;
-  accentColor: number;
+  floor: FloorKind;
   isCorridor: boolean;
 }
 
@@ -36,20 +42,25 @@ export interface WallSegment {
 export const PLAN_WIDTH = 48;
 export const PLAN_HEIGHT = 34;
 export const DOOR_WIDTH = 3;
-
-const TOP_ROW_END = 14;
-const CORRIDOR_END = 19;
+export const TOP_ROW_END = 14;
+export const CORRIDOR_END = 19;
 
 export const ROOMS: readonly Room[] = [
-  { key: RoomKey.ResearchAndDevelopment, name: 'R&D', gx0: 0, gy0: 0, gx1: 20, gy1: TOP_ROW_END, floorColor: 0x2e4a72, accentColor: 0x6cc4ff, isCorridor: false },
-  { key: RoomKey.Product, name: 'PRODUCT', gx0: 20, gy0: 0, gx1: 34, gy1: TOP_ROW_END, floorColor: 0x2f5a48, accentColor: 0x7ef0b0, isCorridor: false },
-  { key: RoomKey.MeetingRoom, name: 'MEETING ROOM', gx0: 34, gy0: 0, gx1: PLAN_WIDTH, gy1: TOP_ROW_END, floorColor: 0x4a3a78, accentColor: 0xc5a3ff, isCorridor: false },
-  { key: RoomKey.Lobby, name: 'LOBBY', gx0: 0, gy0: TOP_ROW_END, gx1: PLAN_WIDTH, gy1: CORRIDOR_END, floorColor: 0x3a3358, accentColor: 0xffd866, isCorridor: true },
-  { key: RoomKey.Marketing, name: 'MARKETING', gx0: 0, gy0: CORRIDOR_END, gx1: 12, gy1: PLAN_HEIGHT, floorColor: 0x6b3558, accentColor: 0xff8ad4, isCorridor: false },
-  { key: RoomKey.Sales, name: 'SALES', gx0: 12, gy0: CORRIDOR_END, gx1: 24, gy1: PLAN_HEIGHT, floorColor: 0x6e5a2a, accentColor: 0xffc857, isCorridor: false },
-  { key: RoomKey.Finance, name: 'FINANCE', gx0: 24, gy0: CORRIDOR_END, gx1: 36, gy1: PLAN_HEIGHT, floorColor: 0x2e5a5a, accentColor: 0x8cf5e6, isCorridor: false },
-  { key: RoomKey.Operations, name: 'OPS / HR', gx0: 36, gy0: CORRIDOR_END, gx1: PLAN_WIDTH, gy1: PLAN_HEIGHT, floorColor: 0x5e4634, accentColor: 0xffb38a, isCorridor: false },
+  { key: RoomKey.ResearchAndDevelopment, name: 'R&D', gx0: 0, gy0: 0, gx1: 20, gy1: TOP_ROW_END, floor: FloorKind.Tile, isCorridor: false },
+  { key: RoomKey.MeetingRoom, name: 'MEETING ROOM', gx0: 20, gy0: 0, gx1: 34, gy1: TOP_ROW_END, floor: FloorKind.Orange, isCorridor: false },
+  { key: RoomKey.Product, name: 'PRODUCT', gx0: 34, gy0: 0, gx1: PLAN_WIDTH, gy1: TOP_ROW_END, floor: FloorKind.Tile, isCorridor: false },
+  { key: RoomKey.Lobby, name: 'LOBBY', gx0: 0, gy0: TOP_ROW_END, gx1: PLAN_WIDTH, gy1: CORRIDOR_END, floor: FloorKind.Corridor, isCorridor: true },
+  { key: RoomKey.Marketing, name: 'MARKETING', gx0: 0, gy0: CORRIDOR_END, gx1: 12, gy1: PLAN_HEIGHT, floor: FloorKind.Tile, isCorridor: false },
+  { key: RoomKey.Sales, name: 'SALES', gx0: 12, gy0: CORRIDOR_END, gx1: 24, gy1: PLAN_HEIGHT, floor: FloorKind.Tile, isCorridor: false },
+  { key: RoomKey.Finance, name: 'FINANCE', gx0: 24, gy0: CORRIDOR_END, gx1: 36, gy1: PLAN_HEIGHT, floor: FloorKind.Tile, isCorridor: false },
+  { key: RoomKey.Operations, name: 'OPS / HR', gx0: 36, gy0: CORRIDOR_END, gx1: PLAN_WIDTH, gy1: PLAN_HEIGHT, floor: FloorKind.Checker, isCorridor: false },
 ];
+
+export function findRoom(key: RoomKey): Room {
+  const room = ROOMS.find((candidate) => candidate.key === key);
+  if (room === undefined) throw new Error(`Unknown room "${key}"`);
+  return room;
+}
 
 export function getRoomCorners(rect: GridRect): GridPoint[] {
   return [
@@ -62,6 +73,11 @@ export function getRoomCorners(rect: GridRect): GridPoint[] {
 
 export function getRoomCenter(rect: GridRect): GridPoint {
   return { gx: (rect.gx0 + rect.gx1) / 2, gy: (rect.gy0 + rect.gy1) / 2 };
+}
+
+/** Turns a room-relative rect into plan coordinates. */
+export function toPlanRect(room: Room, local: GridRect): GridRect {
+  return { gx0: room.gx0 + local.gx0, gy0: room.gy0 + local.gy0, gx1: room.gx0 + local.gx1, gy1: room.gy0 + local.gy1 };
 }
 
 function wallId(wall: WallSegment): string {
@@ -89,7 +105,7 @@ export function cutDoor(wall: WallSegment, doorWidth: number): WallSegment[] {
   ].filter((piece) => piece.end > piece.start);
 }
 
-function isCorridorEdge(room: Room, corridor: Room, edge: WallSegment): boolean {
+function isCorridorEdge(corridor: Room, edge: WallSegment): boolean {
   if (edge.axis !== WallAxis.AlongX) return false;
   return edge.line === corridor.gy0 || edge.line === corridor.gy1;
 }
@@ -105,7 +121,7 @@ export function buildWalls(rooms: readonly Room[]): WallSegment[] {
       getRectEdges(room).forEach((edge) => {
         if (seen.has(wallId(edge))) return;
         seen.add(wallId(edge));
-        const hasDoor = corridor !== undefined && isCorridorEdge(room, corridor, edge);
+        const hasDoor = corridor !== undefined && isCorridorEdge(corridor, edge);
         walls.push(...(hasDoor ? cutDoor(edge, DOOR_WIDTH) : [edge]));
       });
     });
