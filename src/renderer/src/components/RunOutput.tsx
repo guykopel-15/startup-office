@@ -20,13 +20,12 @@ const STATUS_LABELS: Readonly<Record<RunStatus, string>> = {
 };
 const HISTORY_LABEL = 'Earlier runs';
 const HISTORY_LIMIT = 5;
-const COST_DIGITS = 2;
 const SEPARATOR = ' · ';
 
+/** Status and turns only: the CLI's cost figure is an API-equivalent estimate, not a charge on a subscription. */
 function summary(run: AgentRun): string {
   const parts = [STATUS_LABELS[run.status]];
   if (run.turns !== null) parts.push(`${run.turns} turns`);
-  if (run.costUsd !== null) parts.push(`$${run.costUsd.toFixed(COST_DIGITS)}`);
   return parts.join(SEPARATOR);
 }
 
