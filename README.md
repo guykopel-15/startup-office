@@ -4,6 +4,7 @@
 
 | Version | Date | Changes |
 |---|---|---|
+| 1.0.9 | 2026-09-15 | **Added:** NPC dialog box: clicking a figure opens a MapleStory-style box with its portrait, a typed greeting (hello, what it is doing right now, or its last result) and the choices Give a task / Show your work / Bye; HUD bar under the office with quest counts (active, done, failed), the chat history and a chat box: an ask goes to the figure you @mention, else to the one whose job or keywords match (tests → QA, api → backend, budget → accountant…), else to the product manager; every ask becomes a quest and the figure's reply lands in the chat when its run ends; tasks store; `startupOfficeDev.clickFigure` dev hook for captures. **Changed:** figure clicks open the dialog box instead of the agent panel (the panel opens from Show your work or the Agents button); `DSInput` can carry its own aria-label |
 | 1.0.8 | 2026-09-15 | **Added:** figure states in the office: a typing animation (arms on the keyboard) while a figure works, a badge above the name tag (animated dots while working, green tick when done, red cross on error) and a MapleStory-style speech bubble that shows the figure's latest output line, tool note, first result line, error, or "Stopped." when you stop it, so on load you watch the whole team read the repo. **Changed:** the scene now diffs figure state and run output from the stores instead of only seating and removing figures |
 | 1.0.7 | 2026-09-15 | **Added:** agent runner: every figure can run a real `claude` session on its floor's repository; when a floor becomes ready each figure automatically reads the repo from its role's point of view (three sessions at a time, the rest queued); agent panel opened by clicking a figure or the Agents button, with the role prompt (editable), an ask/assign box, Read the repo, Run and Stop, live streamed output with tool notes, result, turns, and earlier runs; `claude` availability check with an inline hint when it is missing. **Changed:** figure state follows its run (working, done, error) |
 | 1.0.6 | 2026-09-14 | **Added:** floors: a side panel with one tab per repository, like workspaces in a terminal multiplexer; New floor dialog takes a GitHub URL or a local folder (with a native Browse picker), then shows a progress bar while the repo is prepared and the default team is hired one figure at a time; each floor has its own figures and repo status; empty-office state; `DSProgressBar`. **Changed:** Load repo dialog and single global repo status replaced by floors; repo IPC takes a floor id; Add figure works on the active floor. |
@@ -62,24 +63,35 @@ its desk typing, and a speech bubble above it shows the agent's latest line.
    ![New floor progress](docs/images/new-floor-progress.png)
 
    ![Two floors](docs/images/office-floor.png)
-3. **Talk.** Click a figure. The agent panel opens with its role prompt, its live output and a
-   box to ask or assign something. When a floor becomes ready every figure has already started
-   reading the repo from its own point of view; you can watch the sessions stream in. In the
-   office each working figure types, animated dots count above its name, and a speech bubble
-   says what it is doing right now. A green tick means done, a red cross means the run failed.
+3. **Talk.** Click a figure. A MapleStory-style dialog box opens with its portrait and what it
+   has to say: a hello, what it is doing right now, or the result of its last run. Choose
+   **Give a task** to type one, **Show your work** for the agent panel (role prompt, live output,
+   earlier runs, Stop), or **Bye**. When a floor becomes ready every figure has already started
+   reading the repo from its own point of view. In the office each working figure types, animated
+   dots count above its name, and a speech bubble says what it is doing right now. A green tick
+   means done, a red cross means the run failed.
+
+   ![Dialog box](docs/images/dialog-box.png)
 
    ![Figures working](docs/images/figure-states.png)
 
    ![Agent panel](docs/images/agent-panel.png)
-4. **Run sprints.** Tasks are quests. Open the sprint board in the meeting room, drag
+4. **Chat with the team.** The bar under the office is the HUD: quest counts and a chat box.
+   Type an ask and press Enter. Mention `@Dan` to pick who takes it; otherwise it goes to the
+   figure whose job or keywords match (tests → QA, api → backend, budget → accountant…), and to
+   the product manager when nothing matches. Every ask is a quest; the reply lands in the chat
+   when the figure's run ends.
+
+   ![HUD chat](docs/images/hud-chat.png)
+5. **Run sprints.** Tasks are quests. Open the sprint board in the meeting room, drag
    quests in, and start the sprint. Figures walk to the meeting room for planning,
    then back to their desks to work.
-5. **Grow the team.** Press **Add figure** in the navbar (the `+` button in a narrow window).
+6. **Grow the team.** Press **Add figure** in the navbar (the `+` button in a narrow window).
    Pick a department with a free desk, give the person a name, job and look, optionally a role
    prompt (it defaults from the job), and they sit down.
 
    ![Add figure dialog](docs/images/add-figure-dialog.png)
-6. **Level up.** Figures gain XP for finished tasks. Failed tasks show damage numbers.
+7. **Level up.** Figures gain XP for finished tasks. Failed tasks show damage numbers.
    Closing a sprint throws confetti.
 
 ## The game layer
@@ -89,8 +101,8 @@ its desk typing, and a speech bubble above it shows the agent's latest line.
 | World | Isometric floor plan: seven rooms around a lobby corridor, opaque walls with windows and decor, per-room floors and furniture |
 | Characters | Idle bounce, desk typing animation, 4-direction walk cycles (task 11) |
 | Floors | Side panel with one tab per repository; each floor has its own team |
-| HUD | Bottom bar: company stats, quest log, chat, minimap |
-| Dialog | MapleStory-style NPC dialog box for every figure |
+| HUD | Bottom bar: quest counts, chat history and the chat box that routes asks to figures |
+| Dialog | MapleStory-style NPC dialog box for every figure: portrait, typed greeting, Give a task / Show your work / Bye |
 | Juice | Level-up burst, damage numbers, confetti, chiptune per room, keyboard clatter |
 
 ## Stack
@@ -123,8 +135,8 @@ Other scripts: `npm test`, `npm run typecheck`, `npm run build`, `npm run icon` 
 when launching to capture the window to a file and quit, which is how the README images are made.
 `STARTUP_OFFICE_WINDOW=300x600` opens the window at a given size, for checking small layouts.
 `STARTUP_OFFICE_SCRIPT=<file>` (together with `STARTUP_OFFICE_SCREENSHOT`) runs a script in the page
-before the capture, to open dialogs or fill forms; `npm run screenshot-scripts` writes the six page scripts used
-for the README images into `scripts/screenshots/generated/` (`floorsReady.js` clones this repo; `figureStates.js` runs real `claude` sessions on a local folder and waits 45 s, or `--hold-ms=<n>`, for the badges and bubbles). All three variables are ignored in packaged builds. The app works down to a 300px wide window:
+before the capture, to open dialogs or fill forms; `npm run screenshot-scripts` writes the eight page scripts used
+for the README images into `scripts/screenshots/generated/` (`floorsReady.js` clones this repo; `figureStates.js` runs real `claude` sessions on a local folder and waits 45 s, or `--hold-ms=<n>`, for the badges and bubbles; `dialogBox.js` and `hudChat.js` drive the dialog box and the chat through the dev-only `window.startupOfficeDev.clickFigure` hook). All three variables are ignored in packaged builds. The app works down to a 300px wide window:
 
 ![The office in a 300px window](docs/images/office-300px.png)
 
@@ -144,7 +156,7 @@ One task = one branch = one pull request, built in order.
 | 7 | Floors | Side panel with a tab per repository, New floor dialog with a progress bar, default team per floor | ✅ |
 | 8 | Agent runner | `claude -p` per figure, streamed to a panel, intake run on repo load | ✅ |
 | 9 | Figure states | typing while working, done tick / error cross badge, speech bubble with the latest line | ✅ |
-| 10 | NPC dialog + HUD chat | Talk to a figure, give a task, it routes to the assignee | ☐ |
+| 10 | NPC dialog + HUD chat | Dialog box on click with Give a task / Show your work; HUD chat routes an ask by @mention or keywords; quests and replies | ✅ |
 | 11 | Meeting room + sprints | Sprint board, figures walk to planning, confetti on close | ☐ |
 | 12 | XP + juice | Levels, level-up burst, damage numbers, sounds | ☐ |
 | 13 | Persistence | Figures, tasks, sprints, world survive restart | ☐ |

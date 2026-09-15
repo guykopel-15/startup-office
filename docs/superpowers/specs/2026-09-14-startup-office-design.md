@@ -99,15 +99,17 @@ interface Figure {
   experiencePoints: number;
 }
 
-interface Task {                 // a quest
+interface Task {                 // a quest (src/shared/tasks.ts)
   id: string;
-  title: string;
-  description: string;
-  assigneeIds: string[];
+  floorId: string;
+  title: string;                 // the CEO's ask, mention stripped
+  assigneeId: string;
   status: 'backlog' | 'active' | 'review' | 'done' | 'failed';
-  sprintId: string | null;
-  runs: AgentRun[];
+  runId: string | null;          // the claude run doing the work
+  createdAt: string;
 }
+
+interface ChatMessage { id: string; floorId: string; authorId: 'ceo' | figureId; text: string; createdAt: string }
 
 interface AgentRun {
   id: string;
@@ -160,7 +162,9 @@ interface Floor { id: string; name: string; source: FloorSource; repoStatus: Rep
 | Furniture | Desk (monitor, keyboard, optional mug / lamp / paper), big desk, meeting table with laptop and chairs, bookshelf, server rack with LEDs, water cooler, sofa, filing cabinet, safe, kitchen counter, fridge, round table, stools, plants. Figures sit behind their desk so the desk top hides the legs |
 | Camera | Fits the office on resize when the user had not zoomed; otherwise keeps their zoom and re-clamps. Wheel zoom toward the pointer, left-drag pan |
 | Figures | Sit at desk with idle bob and random blink; hover scales the figure and expands the name tag to the job. State comes from the floors store: `working` cycles two typing frames (arms on the keyboard, drawn as an overlay that erases the resting arms) and animated dots above the tag; `done` shows a green tick badge, `error` a red cross; `idle` shows no badge. Walking to the meeting room arrives with task 11 |
-| Interaction | Releasing the pointer on a figure without dragging emits `figure:clicked`, which opens the agent panel; task 10 opens the DialogBox on it |
+| Interaction | Releasing the pointer on a figure without dragging emits `figure:clicked`, which opens the DialogBox on it; the agent panel opens from the box's Show your work, the Agents button or the panel's figure select |
+| DialogBox | React overlay at the bottom of the stage: pixel portrait, name and job, the greeting typed one character at a time (`dialogText.ts`: hello when idle, "On it, boss. <last line>" while running, the summarized result when done, the error when failed), choices Give a task (inline input, Enter sends) / Show your work / Bye |
+| HUD | Bottom bar in flow under the office so the camera fits the rest: quest counts (active / done / failed), chat history (collapsed to the last line, expandable), chat box. `routeTask` (`src/shared/tasks.ts`) picks the assignee: @name or @id mention, else the figure scoring most job words and known keywords, else `pm`, else the first figure |
 | Bubbles | The scene subscribes to `runsStore`; for each seated figure the latest run yields one line (`bubbleText.ts`): the last streamed line while running (tool notes read as "Reading src/x.ts"), the first non-empty result line when done, "Hmm, <error>" on error, "Stopped." when cancelled. Absolute paths shrink to their file name, markdown marks stripped, 56 chars max, pop-in on show. The bubble stays up while the figure works and fades 6 s after its last line once the run ends; a floor switch hides bubbles and only new lines pop. Bubbles sit in a UI depth band above every wall and figure |
 | Juice | Level-up burst, floating red numbers on `failed`, confetti on sprint close |
 | Sound | Chiptune loop per room, keyboard clatter scaled to active agents, level-up sting |
@@ -205,7 +209,7 @@ One task = one branch = one PR, in order.
 | 7 | Floors | Side panel with a tab per repository, New floor dialog with a progress bar, default team per floor |
 | 8 | Agent runner | `claude -p` per figure, streamed to AgentPanel, intake run on floor ready |
 | 9 | Figure states | typing frames while working, done / error badges, speech bubbles from the run output |
-| 10 | NPC dialog + HUD chat | Click a figure, give a task, task routes to the assignee |
+| 10 | NPC dialog + HUD chat | DialogBox on click with Give a task / Show your work; HUD chat routes asks by mention or keywords; quests and replies |
 | 11 | Meeting room + sprints | Sprint board, figures walk to planning, confetti on close |
 | 12 | XP + juice | Levels, level-up burst, failed numbers, sounds |
 | 13 | Persistence | Figures, tasks, sprints, world survive restart |

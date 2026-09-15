@@ -2,6 +2,8 @@ import { FloorSetupStep } from '@shared/floors';
 import { RepoState } from '@shared/repo';
 import { DSButton } from '../designKit';
 import { useFloorsStore } from '../store/floorsStore';
+import { useRunsStore } from '../store/runsStore';
+import { useTasksStore } from '../store/tasksStore';
 
 import type React from 'react';
 import type { Floor } from '@shared/floors';
@@ -37,7 +39,11 @@ function FloorTab({ floor, isActive }: { floor: Floor; isActive: boolean }): Rea
   const state = tabState(floor);
   const title = `${floor.name} · ${floor.repoStatus.fullName ?? floor.setup.label}`;
   const handleSelect = (): void => setActiveFloor(floor.id);
-  const handleRemove = (): void => removeFloor(floor.id);
+  const handleRemove = (): void => {
+    removeFloor(floor.id);
+    useRunsStore.getState().clearFloor(floor.id);
+    useTasksStore.getState().clearFloor(floor.id);
+  };
   return (
     <div className={`floor-tab floor-tab--${state}${isActive ? ' floor-tab--active' : ''}`} title={title}>
       <button type="button" className="floor-tab__select" onClick={handleSelect} aria-pressed={isActive} aria-label={title}>
