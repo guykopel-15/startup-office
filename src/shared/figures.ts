@@ -126,6 +126,11 @@ export const DEFAULT_LOOK: FigureLook = {
 };
 
 /** Trims and validates the text a figure is created with. */
+/** The figure with `figureId` among `figures`, or null. */
+export function findFigure(figures: readonly Figure[], figureId: string | null): Figure | null {
+  return figures.find((candidate: Figure): boolean => candidate.id === figureId) ?? null;
+}
+
 export function isValidFigureText(name: string, job: string): boolean {
   const trimmedName = name.trim();
   const trimmedJob = job.trim();

@@ -15,8 +15,12 @@ interface ChatLogProps {
 
 const YOU_LABEL = 'You';
 const UNKNOWN_AUTHOR = 'Someone';
+const HISTORY_LABEL = 'Chat history';
 const EMPTY_TEXT = 'Ask the team anything. Mention @Name to pick who answers.';
 const COLLAPSED_COUNT = 1;
+const LOG_CLASS = 'chat-log';
+const EXPANDED_MODIFIER = '--expanded';
+const EMPTY_CLASS = 'chat-log__empty';
 const MESSAGE_CLASS = 'chat-log__message';
 const CEO_MODIFIER = '--ceo';
 const FIGURE_MODIFIER = '--figure';
@@ -30,15 +34,16 @@ function authorName(authorId: string, figures: readonly Figure[]): string {
 export function ChatLog({ messages, figures, isExpanded }: ChatLogProps): React.JSX.Element {
   const listRef = useRef<HTMLOListElement>(null);
   const shown = isExpanded ? messages : messages.slice(-COLLAPSED_COUNT);
+  const lastId = shown[shown.length - 1]?.id;
 
   useEffect((): void => {
     const list = listRef.current;
     if (list !== null) list.scrollTop = list.scrollHeight;
-  }, [shown.length, isExpanded]);
+  }, [lastId, isExpanded]);
 
-  if (shown.length === 0) return <p className="chat-log__empty">{EMPTY_TEXT}</p>;
+  if (shown.length === 0) return <p className={EMPTY_CLASS}>{EMPTY_TEXT}</p>;
   return (
-    <ol ref={listRef} className={`chat-log${isExpanded ? ' chat-log--expanded' : ''}`} aria-label="Chat history" aria-live="polite">
+    <ol ref={listRef} className={`${LOG_CLASS}${isExpanded ? ` ${LOG_CLASS}${EXPANDED_MODIFIER}` : ''}`} aria-label={HISTORY_LABEL} aria-live="polite">
       {shown.map(
         (message: ChatMessage): React.JSX.Element => (
           <li key={message.id} className={`${MESSAGE_CLASS} ${MESSAGE_CLASS}${message.authorId === CEO_AUTHOR_ID ? CEO_MODIFIER : FIGURE_MODIFIER}`}>

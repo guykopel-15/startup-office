@@ -1,6 +1,7 @@
 import React, { useEffect, useId, useRef } from 'react';
 
 import { DSButton } from './DSButton';
+import { ESCAPE_KEY } from './keyboard';
 
 interface DSModalProps {
   title: string;
@@ -11,10 +12,10 @@ interface DSModalProps {
   footer?: React.ReactNode;
 }
 
-const ESCAPE_KEY = 'Escape';
 const TAB_KEY = 'Tab';
 const CLOSE_LABEL = 'Close';
-const CLOSE_ICON = '×';
+/** The one close glyph every panel and dialog uses. */
+export const CLOSE_ICON = '×';
 const FOCUSABLE_SELECTOR = 'input, select, textarea, button, [tabindex]:not([tabindex="-1"])';
 
 function focusableChildren(panel: HTMLElement): HTMLElement[] {

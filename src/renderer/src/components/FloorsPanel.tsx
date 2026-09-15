@@ -1,6 +1,6 @@
 import { FloorSetupStep } from '@shared/floors';
 import { RepoState } from '@shared/repo';
-import { DSButton } from '../designKit';
+import { CLOSE_ICON, DSButton } from '../designKit';
 import { useFloorsStore } from '../store/floorsStore';
 import { useRunsStore } from '../store/runsStore';
 import { useTasksStore } from '../store/tasksStore';
@@ -16,7 +16,6 @@ const PANEL_TITLE = 'Floors';
 const NEW_FLOOR_LABEL = 'New floor';
 const NEW_FLOOR_ICON = '+';
 const CLOSE_LABEL = 'Close floor';
-const CLOSE_ICON = '×';
 const EMPTY_HINT = 'No floors yet';
 const AVATAR_LENGTH = 1;
 

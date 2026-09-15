@@ -1,12 +1,13 @@
 import { RunMode, RunStatus } from '@shared/agents';
-import { BUBBLE_MAX_LENGTH, bubbleTextForLine, bubbleTextForRun, cleanLine, nextBubbleText, truncate } from './bubbleText';
+import { cleanLine, truncate } from '@shared/text';
+import { BUBBLE_MAX_LENGTH, bubbleTextForLine, bubbleTextForRun, nextBubbleText } from './bubbleText';
 
 import type { AgentRun } from '@shared/agents';
 
 const RUN: AgentRun = { id: 'r', floorId: 'f', figureId: 'x', prompt: 'p', mode: RunMode.ReadOnly, status: RunStatus.Running, lines: [], result: null, error: null, costUsd: null, turns: null, startedAt: '', endedAt: null };
 const ELLIPSIS = '…';
 
-describe('cleanLine and truncate', () => {
+describe('cleanLine and truncate', (): void => {
   it('strips emphasis, code marks and leading heading marks but keeps underscores and comparisons', (): void => {
     expect(cleanLine('**Top 3 risks**   here')).toBe('Top 3 risks here');
     expect(cleanLine('# Report')).toBe('Report');
@@ -16,14 +17,14 @@ describe('cleanLine and truncate', () => {
 
   it('truncates on code points with an ellipsis', (): void => {
     const long = 'a'.repeat(100);
-    expect(truncate(long)).toBe(`${'a'.repeat(BUBBLE_MAX_LENGTH - 1)}${ELLIPSIS}`);
-    expect(truncate('short')).toBe('short');
+    expect(truncate(long, BUBBLE_MAX_LENGTH)).toBe(`${'a'.repeat(BUBBLE_MAX_LENGTH - 1)}${ELLIPSIS}`);
+    expect(truncate('short', BUBBLE_MAX_LENGTH)).toBe('short');
     expect(truncate('ab ', 3)).toBe('ab ');
-    expect(Array.from(truncate(`${'😀'.repeat(60)}`))).toHaveLength(BUBBLE_MAX_LENGTH);
+    expect(Array.from(truncate(`${'😀'.repeat(60)}`, BUBBLE_MAX_LENGTH))).toHaveLength(BUBBLE_MAX_LENGTH);
   });
 });
 
-describe('bubbleTextForLine', () => {
+describe('bubbleTextForLine', (): void => {
   it('turns tool notes into verbs and shortens paths to their last segment', (): void => {
     expect(bubbleTextForLine('▸ Read /Users/me/repo/src/index.ts')).toBe('Reading index.ts');
     expect(bubbleTextForLine('▸ Grep TODO')).toBe('Searching TODO');
@@ -33,7 +34,7 @@ describe('bubbleTextForLine', () => {
   });
 });
 
-describe('bubbleTextForRun', () => {
+describe('bubbleTextForRun', (): void => {
   it('returns null when there is nothing to say', (): void => {
     expect(bubbleTextForRun(null)).toBeNull();
     expect(bubbleTextForRun(RUN)).toBeNull();
@@ -54,7 +55,7 @@ describe('bubbleTextForRun', () => {
   });
 });
 
-describe('nextBubbleText', () => {
+describe('nextBubbleText', (): void => {
   it('returns the text only when it differs from the last one said', (): void => {
     const run: AgentRun = { ...RUN, lines: ['hello'] };
     expect(nextBubbleText(undefined, run)).toBe('hello');

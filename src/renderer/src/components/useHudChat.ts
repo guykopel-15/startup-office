@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { routeTask } from '@shared/tasks';
+import { isBlank } from '@shared/text';
 import { selectActiveFigures, useFloorsStore } from '../store/floorsStore';
+import { CANNOT_START_HINT } from './useGiveTask';
 
-import type { Figure } from '@shared/figures';
 import type { GiveTask } from './useGiveTask';
 
 export interface HudChatState {
@@ -17,19 +18,31 @@ export interface HudChatState {
 }
 
 const NOBODY_HINT = 'Nobody is on this floor to ask.';
-const CANNOT_START_HINT = 'Needs Claude Code and a repository on this floor.';
+const MENTION_ONLY_HINT = 'Say what to do after the @name.';
 
-/** The chat box in the HUD: type an ask, it goes to the right figure. */
+/** The chat box in the HUD: type an ask, it goes to the right figure. The draft belongs to the floor it was typed on. */
 export function useHudChat(giveTask: GiveTask): HudChatState {
+  const floorId = useFloorsStore((state): string | null => state.activeFloorId);
   const figures = useFloorsStore(selectActiveFigures);
   const [text, setText] = useState('');
   const [hint, setHint] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
 
+  useEffect((): void => {
+    setText('');
+    setHint(null);
+  }, [floorId]);
+
+  const handleTextChange = (value: string): void => {
+    setText(value);
+    setHint(null);
+  };
+
   const send = (): void => {
-    const routed = routeTask(text, figures as readonly Figure[]);
+    if (isBlank(text)) return;
+    const routed = routeTask(text, figures);
     if (routed === null) {
-      if (text.trim() !== '') setHint(NOBODY_HINT);
+      setHint(figures.length === 0 ? NOBODY_HINT : MENTION_ONLY_HINT);
       return;
     }
     if (!giveTask.giveTask(routed.assigneeId, routed.title)) {
@@ -41,5 +54,5 @@ export function useHudChat(giveTask: GiveTask): HudChatState {
     setIsExpanded(true);
   };
 
-  return { text, hint, isExpanded, setText, send, toggleExpanded: (): void => setIsExpanded(!isExpanded) };
+  return { text, hint, isExpanded, setText: handleTextChange, send, toggleExpanded: (): void => setIsExpanded(!isExpanded) };
 }

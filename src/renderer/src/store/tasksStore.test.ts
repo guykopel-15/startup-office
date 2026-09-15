@@ -1,7 +1,7 @@
 import { RunMode, RunStatus } from '@shared/agents';
 import { CEO_AUTHOR_ID, TaskStatus } from '@shared/tasks';
 import { REPLY_MAX_LENGTH, replyTextForRun, summarizeResult } from './replyText';
-import { countTasks, selectMessagesForFloor, selectTasksForFloor, useTasksStore } from './tasksStore';
+import { MAX_MESSAGES_PER_FLOOR, countTasks, selectMessagesForFloor, selectTasksForFloor, useTasksStore } from './tasksStore';
 
 import type { AgentRun } from '@shared/agents';
 
@@ -11,7 +11,7 @@ afterEach((): void => {
   useTasksStore.setState({ tasks: [], messages: [] });
 });
 
-describe('tasksStore', () => {
+describe('tasksStore', (): void => {
   it('creates an active task, posts the ask, and closes it with the reply when the run ends', (): void => {
     const task = useTasksStore.getState().addTask({ floorId: 'f1', title: 'write tests', assigneeId: 'qa' });
     useTasksStore.getState().attachRun(task.id, 'run-1');
@@ -35,6 +35,14 @@ describe('tasksStore', () => {
     expect(useTasksStore.getState().messages).toHaveLength(2);
   });
 
+  it('caps messages per floor without touching other floors', (): void => {
+    useTasksStore.getState().addMessage({ floorId: 'other', authorId: 'ceo', text: 'keep me' });
+    for (let index = 0; index <= MAX_MESSAGES_PER_FLOOR; index += 1) useTasksStore.getState().addMessage({ floorId: 'f1', authorId: 'ceo', text: `m${index}` });
+    expect(selectMessagesForFloor(useTasksStore.getState(), 'f1')).toHaveLength(MAX_MESSAGES_PER_FLOOR);
+    expect(selectMessagesForFloor(useTasksStore.getState(), 'f1')[0]?.text).toBe('m1');
+    expect(selectMessagesForFloor(useTasksStore.getState(), 'other')).toHaveLength(1);
+  });
+
   it('clears a floor', (): void => {
     useTasksStore.getState().addTask({ floorId: 'f1', title: 'a', assigneeId: 'qa' });
     useTasksStore.getState().clearFloor('f1');
@@ -43,7 +51,7 @@ describe('tasksStore', () => {
   });
 });
 
-describe('replyText', () => {
+describe('replyText', (): void => {
   it('summarizes results and speaks for stopped, failed and empty runs', (): void => {
     expect(summarizeResult('a'.repeat(400))).toHaveLength(REPLY_MAX_LENGTH);
     expect(replyTextForRun({ ...RUN, status: RunStatus.Cancelled })).toBe('I stopped that one.');

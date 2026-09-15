@@ -25,7 +25,7 @@ export function App(): React.JSX.Element {
   useAutoIntake(isClaudeAvailable);
   const panel = useAgentPanel(isClaudeAvailable);
   const giveTask = useGiveTask(isClaudeAvailable);
-  const dialog = useDialogBox(giveTask, panel.selectFigure);
+  const dialog = useDialogBox(giveTask, { onShowWork: panel.selectFigure, onOpen: panel.close });
   const hasFloors = useFloorsStore((state): boolean => state.floors.length > 0);
   const [isAddFigureOpen, setIsAddFigureOpen] = useState(false);
   const [isNewFloorOpen, setIsNewFloorOpen] = useState(false);

@@ -14,6 +14,9 @@ interface DSButtonProps {
   isDisabled?: boolean;
   variant?: DSButtonVariant;
   title?: string;
+  /** For buttons that toggle a section: sets aria-expanded. */
+  isExpanded?: boolean;
+  shouldAutoFocus?: boolean;
 }
 
 export function DSButton({
@@ -23,6 +26,8 @@ export function DSButton({
   variant = DSButtonVariant.Default,
   title,
   icon,
+  isExpanded,
+  shouldAutoFocus = false,
 }: DSButtonProps): React.JSX.Element {
   const handleClick = (): void => {
     if (isDisabled) return;
@@ -37,6 +42,8 @@ export function DSButton({
       disabled={isDisabled}
       title={title}
       aria-label={children}
+      aria-expanded={isExpanded}
+      autoFocus={shouldAutoFocus}
     >
       {icon !== undefined && (
         <span className="ds-button__icon" aria-hidden="true">
