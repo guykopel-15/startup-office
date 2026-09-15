@@ -13,11 +13,14 @@ import { getRectCorners, getScreenBounds, projectToScreen } from '../world/isoPr
 import { PALETTE } from '../world/palette';
 import { EXTERIOR_WALL_HEIGHT } from '../world/walls';
 import { selectActiveFigures, useFloorsStore } from '../../store/floorsStore';
+import { selectLatestRun, useRunsStore } from '../../store/runsStore';
+import { bubbleTextForRun } from '../entities/bubbleText';
 
 import type { Figure } from '@shared/figures';
 import type { Furniture } from '../world/furniture';
 import type { ScreenBounds, ScreenPoint } from '../world/isoProjection';
 import type { FloorsState } from '../../store/floorsStore';
+import type { RunsState } from '../../store/runsStore';
 
 export const OFFICE_SCENE_KEY = 'office';
 const WORLD_WIDTH = 640;
@@ -36,10 +39,13 @@ const logger = createLogger('office-scene');
 /** The whole floor plan on one screen. The camera fits the office to the window at any size. */
 export class OfficeScene extends Phaser.Scene {
   private figureSprites = new Map<string, FigureSprite>();
+  private figureStates = new Map<string, string>();
+  private lastBubbles = new Map<string, string>();
   private officeCamera: OfficeCamera | null = null;
   private furniture: Furniture[] = [];
   private origin: ScreenPoint = { x: 0, y: 0 };
   private unsubscribeFigures: (() => void) | null = null;
+  private unsubscribeRuns: (() => void) | null = null;
 
   constructor() {
     super(OFFICE_SCENE_KEY);
@@ -54,6 +60,7 @@ export class OfficeScene extends Phaser.Scene {
     this.furniture.forEach((piece: Furniture): void => drawFurniture(this, this.origin, piece));
     this.syncFigures(useFloorsStore.getState());
     this.unsubscribeFigures = useFloorsStore.subscribe(this.handleFloorsChange);
+    this.unsubscribeRuns = useRunsStore.subscribe(this.handleRunsChange);
     this.officeCamera = new OfficeCamera(this, getOfficeBounds(this.origin));
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.handleShutdown, this);
     this.events.once(Phaser.Scenes.Events.DESTROY, this.handleShutdown, this);
@@ -67,8 +74,29 @@ export class OfficeScene extends Phaser.Scene {
       if (wanted.has(id)) return;
       sprite.destroy();
       this.figureSprites.delete(id);
+      this.figureStates.delete(id);
+      this.lastBubbles.delete(id);
     });
     figures.filter((figure: Figure): boolean => !this.figureSprites.has(figure.id)).forEach((figure: Figure): void => this.seatFigure(figure));
+    figures.forEach((figure: Figure): void => this.syncState(figure));
+  }
+
+  /** Pushes a changed figure state into its sprite; unchanged ones are left alone. */
+  private syncState(figure: Figure): void {
+    if (this.figureStates.get(figure.id) === figure.state) return;
+    this.figureStates.set(figure.id, figure.state);
+    this.figureSprites.get(figure.id)?.setState(figure.state);
+  }
+
+  /** Lets each figure say the latest line of its latest run, once per new line. */
+  private syncBubbles(runs: RunsState): void {
+    const floorId = useFloorsStore.getState().activeFloorId ?? '';
+    this.figureSprites.forEach((sprite: FigureSprite, figureId: string): void => {
+      const text = bubbleTextForRun(selectLatestRun(runs, floorId, figureId));
+      if (text === null || this.lastBubbles.get(figureId) === text) return;
+      this.lastBubbles.set(figureId, text);
+      sprite.say(text);
+    });
   }
 
   private seatFigure(figure: Figure): void {
@@ -85,9 +113,15 @@ export class OfficeScene extends Phaser.Scene {
     this.syncFigures(state);
   };
 
+  private readonly handleRunsChange = (state: RunsState): void => {
+    this.syncBubbles(state);
+  };
+
   private handleShutdown(): void {
     this.unsubscribeFigures?.();
     this.unsubscribeFigures = null;
+    this.unsubscribeRuns?.();
+    this.unsubscribeRuns = null;
     this.officeCamera?.destroy();
     this.officeCamera = null;
     this.figureSprites.forEach((sprite: FigureSprite): void => sprite.destroy());

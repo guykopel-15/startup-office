@@ -159,9 +159,9 @@ interface Floor { id: string; name: string; source: FloorSource; repoStatus: Rep
 | Map | One 640×360 world drawn procedurally: 48×34 tile isometric plan (2:1 tiles). Wall geometry, palette and furniture kits follow the owner's design handoff (`docs/design/handoff.md`); the room program stays the §3 departments on a rectangular plate. Far walls tall and opaque with windows, near edges low rims, interior walls 0.6 tile thick with door gaps, per-room floors (tile, orange, checker, corridor runner), wall decor (whiteboard, charts, sticky notes, posters). Exterior walls and rims are one Graphics each; every interior wall tile, furniture piece and figure is its own depth-sorted object |
 | Furniture | Desk (monitor, keyboard, optional mug / lamp / paper), big desk, meeting table with laptop and chairs, bookshelf, server rack with LEDs, water cooler, sofa, filing cabinet, safe, kitchen counter, fridge, round table, stools, plants. Figures sit behind their desk so the desk top hides the legs |
 | Camera | Fits the office on resize when the user had not zoomed; otherwise keeps their zoom and re-clamps. Wheel zoom toward the pointer, left-drag pan |
-| Figures | Sit at desk with idle bob and random blink; hover scales the figure and expands the name tag to the job; typing animation while `working` and walking to the meeting room arrive with tasks 8 and 10 |
-| Interaction | Releasing the pointer on a figure without dragging emits `figure:clicked`; task 9 opens the DialogBox on it |
-| Bubbles | Last line of agent output shown as a speech bubble over the figure |
+| Figures | Sit at desk with idle bob and random blink; hover scales the figure and expands the name tag to the job. State comes from the floors store: `working` cycles two typing frames (arms on the keyboard, drawn as an overlay that erases the resting arms) and animated dots above the tag; `done` shows a green tick badge, `error` a red cross; `idle` shows no badge. Walking to the meeting room arrives with task 11 |
+| Interaction | Releasing the pointer on a figure without dragging emits `figure:clicked`, which opens the agent panel; task 10 opens the DialogBox on it |
+| Bubbles | The scene subscribes to `runsStore`; for each seated figure the latest run yields one line (`bubbleText.ts`): the last streamed line while running (tool notes read as "Reading src/x.ts"), the first non-empty result line when done, "Hmm, <error>" on error, "Stopped." when cancelled. Markdown marks stripped, 72 chars max, shown for 6 s with a pop-in, re-shown only when the text changes |
 | Juice | Level-up burst, floating red numbers on `failed`, confetti on sprint close |
 | Sound | Chiptune loop per room, keyboard clatter scaled to active agents, level-up sting |
 | Minimap | Rooms + figure dots + CEO position, in the HUD |
@@ -204,7 +204,7 @@ One task = one branch = one PR, in order.
 | 6 | Repo intake | Load repo dialog, shallow clone via git, status chip in the navbar |
 | 7 | Floors | Side panel with a tab per repository, New floor dialog with a progress bar, default team per floor |
 | 8 | Agent runner | `claude -p` per figure, streamed to AgentPanel, intake run on floor ready |
-| 9 | Figure states | idle / working / done / error animations, speech bubbles, desk screens |
+| 9 | Figure states | typing frames while working, done / error badges, speech bubbles from the run output |
 | 10 | NPC dialog + HUD chat | Click a figure, give a task, task routes to the assignee |
 | 11 | Meeting room + sprints | Sprint board, figures walk to planning, confetti on close |
 | 12 | XP + juice | Levels, level-up burst, failed numbers, sounds |

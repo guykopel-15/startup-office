@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 
 export const TRANSPARENT_PIXEL = '.';
+/** In overlays only: paints the base pixel transparent. */
+export const ERASE_PIXEL = ' ';
 
 /** Maps one character in a pixel row to a CSS color. */
 export type PixelPalette = Record<string, string>;

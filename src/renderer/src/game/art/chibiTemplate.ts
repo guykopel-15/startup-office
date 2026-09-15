@@ -3,7 +3,8 @@ import { Accessory, HairStyle } from '@shared/figures';
 /**
  * Pixel rows for the chibi figure. Tokens map to palette colors in composeFigure:
  * D outline, H hair, h hair highlight, S skin, s skin shade, E eye, W eye light,
- * R blush, M mouth, T top, t top shade, P pants, B shoes, A accessory, C cap, . transparent.
+ * R blush, M mouth, T top, t top shade, P pants, B shoes, A accessory, C cap, . transparent,
+ * space = erase (paint transparent over the base).
  */
 export const FIGURE_WIDTH = 18;
 export const FIGURE_HEIGHT = 26;
@@ -48,6 +49,12 @@ export interface Overlay {
   offsetY: number;
   rows: readonly string[];
 }
+
+/** Arms brought forward onto the keyboard; two frames alternate while a figure works. */
+export const TYPING_FRAMES: readonly Overlay[] = [
+  { offsetY: 17, rows: ['. DTTTTTTTTTTTTD .', '. DTTSSTTTTSSTTD .', '. DTTttTTTTttTTD .'] },
+  { offsetY: 17, rows: ['. DTTSSTTTTSSTTD .', '. DTTttTTTTttTTD .', '. DTTTTTTTTTTTTD .'] },
+];
 
 const SPIKY_HAIR: Overlay = {
   offsetY: 0,
