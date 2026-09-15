@@ -60,9 +60,9 @@ two spare desks; a full department is disabled in the dialog.
 │  Renderer (React + Phaser)                                                │
 │   ├─ <FloorsPanel>    tabs per floor, New floor dialog with progress       │
 │   ├─ <Navbar>         Add figure dialog, active floor repo chip           │
-│   ├─ <GameCanvas>     Phaser scene: tilemap, rooms, figures, CEO, camera  │
-│   ├─ <HUD>            bottom bar: company stats, quest log, chat, minimap  │
-│   ├─ <DialogBox>      MapleStory-style NPC dialog                         │
+│   ├─ <GameCanvas>     Phaser scene: rooms, furniture, figures, camera     │
+│   ├─ <HUD>            bottom bar: quest counts, chat history, chat box     │
+│   ├─ <DialogBox>      NPC dialog: portrait, typed greeting, 3 choices     │
 │   └─ <AgentPanel>     full log for a figure, re-run, edit role prompt     │
 └───────────────────────────────────────────────────────────────────────────┘
 ```
@@ -111,14 +111,20 @@ interface Task {                 // a quest (src/shared/tasks.ts)
 
 interface ChatMessage { id: string; floorId: string; authorId: 'ceo' | figureId; text: string; createdAt: string }
 
-interface AgentRun {
+interface AgentRun {             // src/shared/agents.ts; a quest points at its run via Task.runId
   id: string;
+  floorId: string;
   figureId: string;
-  taskId: string | null;   // null = repo intake run
+  prompt: string;
+  mode: 'readOnly' | 'edit';
+  status: 'queued' | 'running' | 'done' | 'error' | 'cancelled';
+  lines: string[];               // streamed text and tool notes, bounded
+  result: string | null;
+  error: string | null;
+  costUsd: number | null;
+  turns: number | null;
   startedAt: string;
   endedAt: string | null;
-  exitCode: number | null;
-  output: string;          // full streamed text
 }
 
 interface Sprint { id: string; name: string; goal: string; taskIds: string[]; status: 'planning' | 'active' | 'closed' }
@@ -152,6 +158,8 @@ interface Floor { id: string; name: string; source: FloorSource; repoStatus: Rep
   id at once, events follow; `agent:cancel` kills a running session or drops a queued one.
 - Renderer: `runsStore` keeps runs and their tail of lines; run status mirrors onto the figure
   (`working`, `done`, `error`); the AgentPanel shows the latest run live and earlier runs.
+- `tasksStore` keeps quests and chat per floor; a run's `done` event marks its quest done or failed
+  and posts the figure's reply. Every run today is read-only; edit runs come later.
 - All agent output is treated as data. It is displayed, never executed.
 
 ## 7. Game layer (Phaser)
@@ -163,12 +171,11 @@ interface Floor { id: string; name: string; source: FloorSource; repoStatus: Rep
 | Camera | Fits the office on resize when the user had not zoomed; otherwise keeps their zoom and re-clamps. Wheel zoom toward the pointer, left-drag pan |
 | Figures | Sit at desk with idle bob and random blink; hover scales the figure and expands the name tag to the job. State comes from the floors store: `working` cycles two typing frames (arms on the keyboard, drawn as an overlay that erases the resting arms) and animated dots above the tag; `done` shows a green tick badge, `error` a red cross; `idle` shows no badge. Walking to the meeting room arrives with task 11 |
 | Interaction | Releasing the pointer on a figure without dragging emits `figure:clicked`, which opens the DialogBox on it; the agent panel opens from the box's Show your work, the Agents button or the panel's figure select |
-| DialogBox | React overlay at the bottom of the stage: pixel portrait, name and job, the greeting typed one character at a time (`dialogText.ts`: hello when idle, "On it, boss. <last line>" while running, the summarized result when done, the error when failed), choices Give a task (inline input, Enter sends) / Show your work / Bye |
-| HUD | Bottom bar in flow under the office so the camera fits the rest: quest counts (active / done / failed), chat history (collapsed to the last line, expandable), chat box. `routeTask` (`src/shared/tasks.ts`) picks the assignee: @name or @id mention, else the figure scoring most job words and known keywords, else `pm`, else the first figure |
+| DialogBox | React overlay at the bottom of the stage: pixel portrait, name and job, the greeting typed one character at a time and frozen when the box opens (`dialogText.ts`: hello when idle, "I'm in the queue" when queued, "On it, boss. <last line>" while running, the summarized result when done, the error when failed, "I stopped that one." when cancelled; a click reveals it all, Escape closes, focus returns to the canvas), choices Give a task (inline input, Enter sends) / Show your work / Bye |
+| HUD | Bottom bar in flow under the office so the camera fits the rest: quest counts (active / done / failed), chat history (collapsed to the last line, expandable), chat box. `routeTask` (`src/shared/tasks.ts`) picks the assignee: @name or @id mention (punctuation, multi-word and non-Latin names allowed; an unknown mention stays in the text), else the figure scoring most job words and known keywords (earlier figure on a tie), else `pm`, else the first figure |
 | Bubbles | The scene subscribes to `runsStore`; for each seated figure the latest run yields one line (`bubbleText.ts`): the last streamed line while running (tool notes read as "Reading src/x.ts"), the first non-empty result line when done, "Hmm, <error>" on error, "Stopped." when cancelled. Absolute paths shrink to their file name, markdown marks stripped, 56 chars max, pop-in on show. The bubble stays up while the figure works and fades 6 s after its last line once the run ends; a floor switch hides bubbles and only new lines pop. Bubbles sit in a UI depth band above every wall and figure |
 | Juice | Level-up burst, floating red numbers on `failed`, confetti on sprint close |
 | Sound | Chiptune loop per room, keyboard clatter scaled to active agents, level-up sting |
-| Minimap | Rooms + figure dots + CEO position, in the HUD |
 
 ## 8. Error handling
 
@@ -180,7 +187,9 @@ interface Floor { id: string; name: string; source: FloorSource; repoStatus: Rep
 | git waits for credentials | Prompts are disabled (`GIT_TERMINAL_PROMPT=0`), so git fails fast; any git run is killed after 5 minutes |
 | Clone fails | The floor's progress bar turns red with the last git line, its tab dot turns red, the half clone is deleted; close the tab and try again |
 | Local folder missing | Progress bar shows "That folder does not exist" |
-| Agent exit ≠ 0 | Figure `error`: red cross badge, white bubble "Hmm, <error>", full stderr in AgentPanel, retry button |
+| Agent exit ≠ 0 | Figure `error`: red cross badge, white bubble "Hmm, <error>", the quest fails and the chat shows "That one failed: <error>", full output in AgentPanel |
+| Ask with nobody / no repo / no claude | HUD hint "Nobody is on this floor to ask." or "Needs Claude Code and a repository on this floor."; the dialog's Give a task is disabled with the same hint |
+| Run fails to start | The quest fails and the figure replies "I couldn't start on that: <error>" |
 | Concurrency cap hit | Run shows "queued"; the figure looks like a working one (typing, dots) until its turn |
 | Corrupt JSON state | Backup file renamed `.bak`, fresh defaults loaded, warning shown |
 
@@ -189,7 +198,7 @@ interface Floor { id: string; name: string; source: FloorSource; repoStatus: Rep
 - Main process: unit tests with Vitest for RepoService (injected git runner), the real git
   runner against `git --version`, the repo controller (DTO, error mapping, registration),
   the URL parser, AgentRunner, StateStore.
-- Renderer: Vitest + Testing Library for the figures store, the Add figure dialog and modal, the Load repo dialog, the repo status chip, HUD, DialogBox, AgentPanel; pure unit tests for the pixel art (figure frames, badges) and the bubble text.
+- Renderer: Vitest + Testing Library for the figures store, the Add figure dialog and modal, the Load repo dialog, the repo status chip, HUD (routing, replies through the event bridge, failed starts), DialogBox (typewriter, floor switch, focus), AgentPanel; pure unit tests for the pixel art (figure frames, badges), the bubble text, `routeTask`, the tasks store and the reply text. Shared test helpers live in `src/renderer/src/test/`.
 - Phaser scene: smoke test that the scene boots headless and spawns N figures (pending; today Phaser is mocked in unit tests).
 - Manual: paste a repo, watch intake run, give a task, see it move to done.
 

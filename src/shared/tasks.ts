@@ -35,8 +35,12 @@ export const MAX_TASK_LENGTH = 500;
 /** The figure that catches asks nobody else matches, when it is on the floor. */
 export const DEFAULT_ASSIGNEE_ID = 'pm';
 const MENTION_PREFIX = '@';
-const MENTION_PATTERN = /(^|\s)@([\w-]+)/;
-const WORD_PATTERN = /[a-z0-9]+/g;
+/** Everything after the @ up to the end of the line; the figure name is matched against its start. */
+const MENTION_PATTERN = /(?:^|\s)@(?<rest>.*)$/su;
+const PUNCTUATION = /[\s.,;:!?'"]/u;
+const LEADING_PUNCTUATION = /^[\s.,;:!?'"]+/u;
+/** Letters and digits in any script, so Hebrew names and job titles route too. */
+const WORD_PATTERN = /[\p{L}\p{N}]+/gu;
 const WHITESPACE = /\s+/g;
 
 /** Words in an ask that point at one of the default figures, beyond its job title. */
@@ -61,7 +65,13 @@ const KEYWORD_FIGURE_IDS: Readonly<Record<string, string>> = {
 
 export interface RoutedTask {
   assigneeId: string;
-  /** The ask with any @mention removed. */
+  /** The ask with the @mention removed. */
+  title: string;
+}
+
+interface Mention {
+  figure: Figure;
+  /** The ask with the mention cut out. */
   title: string;
 }
 
@@ -69,10 +79,27 @@ function words(text: string): string[] {
   return text.toLowerCase().match(WORD_PATTERN) ?? [];
 }
 
-function findMentioned(text: string, figures: readonly Figure[]): Figure | undefined {
-  const mention = MENTION_PATTERN.exec(text)?.[2]?.toLowerCase();
-  if (mention === undefined) return undefined;
-  return figures.find((figure: Figure): boolean => figure.id.toLowerCase() === mention || figure.name.toLowerCase() === mention);
+/** Whether `rest` (the text after an @) starts with `label` as a whole word, ignoring case. */
+function startsWithLabel(rest: string, label: string): boolean {
+  const head = rest.slice(0, label.length);
+  const next = rest.slice(label.length, label.length + 1);
+  return head.toLowerCase() === label.toLowerCase() && (next === '' || PUNCTUATION.test(next));
+}
+
+/** "@Maya, fix the header" or "@Ana Maria fix it": the longest figure name or id at the mention wins. */
+function findMention(text: string, figures: readonly Figure[]): Mention | undefined {
+  const match = MENTION_PATTERN.exec(text);
+  const rest = match?.groups?.['rest'];
+  if (match === null || match === undefined || rest === undefined) return undefined;
+  const candidates = figures.flatMap((figure: Figure): { figure: Figure; label: string }[] => [
+    { figure, label: figure.name },
+    { figure, label: figure.id },
+  ]);
+  const hit = candidates.filter((candidate): boolean => startsWithLabel(rest, candidate.label)).sort((a, b): number => b.label.length - a.label.length)[0];
+  if (hit === undefined) return undefined;
+  const before = text.slice(0, match.index);
+  const tail = rest.slice(hit.label.length).replace(LEADING_PUNCTUATION, '');
+  return { figure: hit.figure, title: `${before} ${tail}`.replace(WHITESPACE, ' ').trim() };
 }
 
 /** Points scored by a figure for an ask: its id, job words and known keywords found in the text. */
@@ -84,6 +111,7 @@ function scoreFigure(figure: Figure, askWords: readonly string[]): number {
   }, 0);
 }
 
+/** The best-scoring figure; on a tie the earlier figure on the floor wins. */
 function findByKeywords(text: string, figures: readonly Figure[]): Figure | undefined {
   const askWords = words(text);
   let best: { figure: Figure; score: number } | undefined;
@@ -96,12 +124,15 @@ function findByKeywords(text: string, figures: readonly Figure[]): Figure | unde
 
 /**
  * Who should take an ask: an @name or @id mention wins, then the figure whose job or known
- * keywords match most words, then the product manager, then the first figure. Null with no figures.
+ * keywords match most words, then the product manager, then the first figure. An unknown
+ * mention is left in the text and routed by keywords. Null with no figures or no text.
  */
 export function routeTask(text: string, figures: readonly Figure[]): RoutedTask | null {
-  const title = text.replace(MENTION_PATTERN, ' ').replace(WHITESPACE, ' ').trim();
-  if (title === '' || figures.length === 0) return null;
-  const assignee = findMentioned(text, figures) ?? findByKeywords(title, figures) ?? figures.find((figure: Figure): boolean => figure.id === DEFAULT_ASSIGNEE_ID) ?? figures[0];
+  if (figures.length === 0) return null;
+  const mention = findMention(text, figures);
+  const title = (mention?.title ?? text).replace(WHITESPACE, ' ').trim();
+  if (title === '') return null;
+  const assignee = mention?.figure ?? findByKeywords(title, figures) ?? figures.find((figure: Figure): boolean => figure.id === DEFAULT_ASSIGNEE_ID) ?? figures[0];
   return assignee === undefined ? null : { assigneeId: assignee.id, title };
 }
 

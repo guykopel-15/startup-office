@@ -11,5 +11,5 @@ export function GameCanvas(): React.JSX.Element {
     return () => game.destroy(true);
   }, []);
 
-  return <div ref={hostRef} className="game-canvas" data-testid="game-canvas" />;
+  return <div ref={hostRef} className="game-canvas" data-testid="game-canvas" tabIndex={-1} />;
 }

@@ -1,36 +1,27 @@
 import { act, renderHook } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { vi } from 'vitest';
 
-vi.mock('phaser', () => ({ default: { Events: { EventEmitter: class { on(): void {} off(): void {} } } } }));
+vi.mock('phaser', async (): Promise<object> => (await import('../test/phaserMock')).phaserMock());
 
 import { RunMode, RunStatus } from '@shared/agents';
-import { DEFAULT_FIGURES } from '@shared/figures';
-import { FloorSourceKind } from '@shared/floors';
+import { GameEvent, gameEvents } from '../game/events';
 import { useFloorsStore } from '../store/floorsStore';
 import { useRunsStore } from '../store/runsStore';
+import { installOfficeMock, seedReadyFloor } from '../test/officeMock';
+import { QueryWrapper } from '../test/renderWithQueryClient';
 import { useAgentPanel } from './useAgentPanel';
 
-import type React from 'react';
-import type { Figure } from '@shared/figures';
-
-function wrapper({ children }: { children: React.ReactNode }): React.JSX.Element {
-  return <QueryClientProvider client={new QueryClient()}>{children}</QueryClientProvider>;
-}
+import type { FigureClickedPayload } from '../game/events';
 
 beforeEach((): void => {
-  window.office = { version: 'test', platform: 'darwin', repo: { load: vi.fn(), useLocal: vi.fn(), getStatus: vi.fn(), pickFolder: vi.fn(), onStatus: vi.fn().mockReturnValue((): void => undefined) }, agents: { check: vi.fn(), start: vi.fn().mockResolvedValue({ isOk: true, data: 'run-1' }), cancel: vi.fn().mockResolvedValue({ isOk: true, data: null }), onEvent: vi.fn().mockReturnValue((): void => undefined) } };
-  useFloorsStore.setState({ floors: [], activeFloorId: null });
-  useRunsStore.setState({ runs: [], intakeStartedFloorIds: [] });
-  const floor = useFloorsStore.getState().createFloor({ name: 'Test', source: { kind: FloorSourceKind.Local, path: '/tmp/x' } });
-  useFloorsStore.getState().setRepoStatus(floor.id, { state: 'ready', url: null, fullName: 'x', path: '/tmp/x', message: null } as never);
-  useFloorsStore.getState().appendFigure(floor.id, DEFAULT_FIGURES[0] as Figure);
+  installOfficeMock();
+  seedReadyFloor();
 });
 
-describe('useAgentPanel', () => {
+describe('useAgentPanel', (): void => {
   it('stays stable while runs stream in, and exposes the latest run of the open figure', (): void => {
-    const { result } = renderHook((): ReturnType<typeof useAgentPanel> => useAgentPanel(true), { wrapper });
-    const floorId = useFloorsStore.getState().activeFloorId as string;
+    const { result } = renderHook((): ReturnType<typeof useAgentPanel> => useAgentPanel(true), { wrapper: QueryWrapper });
+    const floorId = useFloorsStore.getState().activeFloorId ?? '';
     act((): void => result.current.selectFigure('frontend'));
     expect(result.current.isOpen).toBe(true);
     act((): void => {
@@ -43,5 +34,12 @@ describe('useAgentPanel', () => {
     expect(result.current.latestRun?.lines).toHaveLength(20);
     expect(result.current.isBusy).toBe(true);
     expect(result.current.canRun).toBe(false);
+  });
+
+  it('no longer opens on a figure click; the dialog box owns that', (): void => {
+    const { result } = renderHook((): ReturnType<typeof useAgentPanel> => useAgentPanel(true), { wrapper: QueryWrapper });
+    const payload: FigureClickedPayload = { figureId: 'frontend' };
+    act((): void => void gameEvents.emit(GameEvent.FigureClicked, payload));
+    expect(result.current.isOpen).toBe(false);
   });
 });

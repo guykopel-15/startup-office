@@ -1,4 +1,4 @@
-import { DSButton, DSField, DSInput } from '../designKit';
+import { DSButton, DSField, DSInput, submitOnEnter } from '../designKit';
 
 import type React from 'react';
 import type { DSFieldControlProps } from '../designKit';
@@ -16,13 +16,10 @@ export const SOURCE_FIELD_ID = 'floor-source';
 const SOURCE_PLACEHOLDER = 'https://github.com/owner/repo or /path/to/folder';
 const BROWSE_LABEL = 'Browse…';
 const HELP_TEXT = 'Each floor is one repository with its own team. Paste a GitHub URL to clone it, or point at a folder on this Mac.';
-const ENTER_KEY = 'Enter';
 
 /** The repository and name fields of the New floor dialog. State lives in `useNewFloor`. */
 export function NewFloorForm({ form }: NewFloorFormProps): React.JSX.Element {
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>): void => {
-    if (event.key === ENTER_KEY) form.submit();
-  };
+  const handleKeyDown = submitOnEnter(form.submit);
   return (
     <>
       <p className="dialog-help">{HELP_TEXT}</p>

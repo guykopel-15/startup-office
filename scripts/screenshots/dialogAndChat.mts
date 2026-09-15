@@ -1,6 +1,7 @@
 /**
  * Builds the page scripts for the task 10 captures: the NPC dialog box on a figure, and the HUD
- * chat after an ask was routed and answered. Both use the dev hook `window.startupOfficeDev`.
+ * chat after an ask was routed and answered. The dialog script opens the box through the dev hook
+ * `window.startupOfficeDev.clickFigure`; the chat script types into the real chat box.
  */
 import { buildLocalFloorSetup } from './newFloor.mts';
 import { pageScript } from './pageHelpers.mts';
@@ -10,7 +11,7 @@ const DIALOG_SETTLE_MS = 3000;
 const CHAT_FIELD_ID = 'hud-chat';
 const CHAT_ASK = '@Dan write a short test plan for the riskiest module';
 const EXPAND_LABEL = 'Show chat history';
-const FIGURE_MESSAGE_CLASS = 'chat-log__message--figure';
+const DONE_CHIP_SELECTOR = '[title="1 done"]';
 /** The ask queues behind the floor's intake runs, so the reply can take a while. */
 const REPLY_TIMEOUT_MS = 15 * 60 * 1000;
 const POLL_MS = 500;
@@ -35,7 +36,7 @@ export function buildHudChatScript(): string {
   {
     const started = Date.now();
     while (Date.now() - started < ${REPLY_TIMEOUT_MS}) {
-      if (document.querySelector('.${FIGURE_MESSAGE_CLASS}')) break;
+      if (document.querySelector(${JSON.stringify(DONE_CHIP_SELECTOR)})) break;
       await wait(${POLL_MS});
     }
   }

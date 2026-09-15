@@ -39,8 +39,8 @@ export interface TasksState {
 
 const TASK_ID_PREFIX = 'task-';
 const MESSAGE_ID_PREFIX = 'message-';
-/** Keep memory bounded per floor; the chat shows the tail anyway. */
-export const MAX_MESSAGES = 200;
+/** Keep memory bounded: each floor keeps its latest messages; the chat shows the tail anyway. */
+export const MAX_MESSAGES_PER_FLOOR = 200;
 const EMPTY_TASKS: readonly Task[] = [];
 const EMPTY_MESSAGES: readonly ChatMessage[] = [];
 
@@ -54,12 +54,24 @@ function nextId(prefix: string): string {
   return `${prefix}${crypto.randomUUID()}`;
 }
 
-function patchTask(tasks: readonly Task[], match: (task: Task) => boolean, patch: (task: Task) => Task): Task[] {
-  return tasks.map((task: Task): Task => (match(task) ? patch(task) : task));
+function patchTaskById(tasks: readonly Task[], taskId: string, patch: (task: Task) => Task): Task[] {
+  return tasks.map((task: Task): Task => (task.id === taskId ? patch(task) : task));
 }
 
 function buildMessage(input: NewMessageInput): ChatMessage {
   return { id: nextId(MESSAGE_ID_PREFIX), floorId: input.floorId, authorId: input.authorId, text: input.text, createdAt: new Date().toISOString() };
+}
+
+/** Drops the oldest messages of `floorId` beyond the cap; other floors are untouched. */
+function capFloorMessages(messages: readonly ChatMessage[], floorId: string): ChatMessage[] {
+  const overflow = messages.filter((message: ChatMessage): boolean => message.floorId === floorId).length - MAX_MESSAGES_PER_FLOOR;
+  if (overflow <= 0) return [...messages];
+  let dropped = 0;
+  return messages.filter((message: ChatMessage): boolean => {
+    if (message.floorId !== floorId || dropped >= overflow) return true;
+    dropped += 1;
+    return false;
+  });
 }
 
 export function selectTasksForFloor(state: { tasks: readonly Task[] }, floorId: string | null): readonly Task[] {
@@ -86,24 +98,24 @@ export const useTasksStore = create<TasksState>((set: StoreApi<TasksState>['setS
     return task;
   },
   attachRun: (taskId: string, runId: string): void => {
-    set({ tasks: patchTask(get().tasks, (task: Task): boolean => task.id === taskId, (task: Task): Task => ({ ...task, runId })) });
+    set({ tasks: patchTaskById(get().tasks, taskId, (task: Task): Task => ({ ...task, runId })) });
   },
   addMessage: (input: NewMessageInput): ChatMessage => {
     const message = buildMessage(input);
-    set({ messages: [...get().messages, message].slice(-MAX_MESSAGES) });
+    set({ messages: capFloorMessages([...get().messages, message], input.floorId) });
     return message;
   },
   finishRun: (run: AgentRun): void => {
     const status = TASK_STATUS_BY_RUN_STATUS[run.status];
     const task = get().tasks.find((candidate: Task): boolean => candidate.runId === run.id);
     if (status === undefined || task === undefined) return;
-    set({ tasks: patchTask(get().tasks, (candidate: Task): boolean => candidate.id === task.id, (candidate: Task): Task => ({ ...candidate, status })) });
+    set({ tasks: patchTaskById(get().tasks, task.id, (candidate: Task): Task => ({ ...candidate, status })) });
     get().addMessage({ floorId: run.floorId, authorId: run.figureId, text: replyTextForRun(run) });
   },
   failTask: (taskId: string, reason: string): void => {
     const task = get().tasks.find((candidate: Task): boolean => candidate.id === taskId);
     if (task === undefined) return;
-    set({ tasks: patchTask(get().tasks, (candidate: Task): boolean => candidate.id === taskId, (candidate: Task): Task => ({ ...candidate, status: TaskStatus.Failed })) });
+    set({ tasks: patchTaskById(get().tasks, taskId, (candidate: Task): Task => ({ ...candidate, status: TaskStatus.Failed })) });
     get().addMessage({ floorId: task.floorId, authorId: task.assigneeId, text: reason });
   },
   clearFloor: (floorId: string): void => {

@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 
 import { MAX_TASK_LENGTH, TaskStatus } from '@shared/tasks';
-import { DSButton, DSButtonVariant, DSInput } from '../designKit';
+import { isBlank } from '@shared/text';
+import { DSButton, DSButtonVariant, DSInput, submitOnEnter } from '../designKit';
 import { selectActiveFigures, useFloorsStore } from '../store/floorsStore';
 import { countTasks, selectMessagesForFloor, selectTasksForFloor, useTasksStore } from '../store/tasksStore';
 import { ChatLog } from './ChatLog';
@@ -26,6 +27,9 @@ const QUEST_CHIPS: readonly QuestChip[] = [
   { status: TaskStatus.Done, icon: '✔', label: 'done' },
   { status: TaskStatus.Failed, icon: '✖', label: 'failed' },
 ];
+const HUD_LABEL = 'HUD';
+const QUESTS_LABEL = 'Quests';
+const CHAT_LABEL = 'Chat';
 const CHAT_FIELD_ID = 'hud-chat';
 const CHAT_PLACEHOLDER = 'Tell the team… (@Maya to pick who)';
 const SEND_LABEL = 'Send';
@@ -34,11 +38,10 @@ const EXPAND_LABEL = 'Show chat history';
 const COLLAPSE_LABEL = 'Hide chat history';
 const EXPAND_ICON = '▲';
 const COLLAPSE_ICON = '▼';
-const ENTER_KEY = 'Enter';
 
 function QuestChips({ tasks }: { tasks: readonly Task[] }): React.JSX.Element {
   return (
-    <div className="hud__quests" aria-label="Quests">
+    <div className="hud__quests" role="group" aria-label={QUESTS_LABEL}>
       {QUEST_CHIPS.map(
         (chip: QuestChip): React.JSX.Element => (
           <span key={chip.status} className={`hud__quest hud__quest--${chip.status}`} title={`${countTasks(tasks, chip.status)} ${chip.label}`}>
@@ -60,15 +63,12 @@ export function Hud({ giveTask }: HudProps): React.JSX.Element {
   const tasks = useMemo((): readonly Task[] => selectTasksForFloor({ tasks: allTasks }, floorId), [allTasks, floorId]);
   const messages = useMemo((): readonly ChatMessage[] => selectMessagesForFloor({ messages: allMessages }, floorId), [allMessages, floorId]);
   const chat = useHudChat(giveTask);
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>): void => {
-    if (event.key === ENTER_KEY) chat.send();
-  };
 
   return (
-    <footer className="hud" aria-label="HUD">
+    <footer className="hud" aria-label={HUD_LABEL}>
       <div className="hud__top">
         <QuestChips tasks={tasks} />
-        <DSButton onClick={chat.toggleExpanded} icon={chat.isExpanded ? COLLAPSE_ICON : EXPAND_ICON} title={chat.isExpanded ? COLLAPSE_LABEL : EXPAND_LABEL}>
+        <DSButton onClick={chat.toggleExpanded} icon={chat.isExpanded ? COLLAPSE_ICON : EXPAND_ICON} title={chat.isExpanded ? COLLAPSE_LABEL : EXPAND_LABEL} isExpanded={chat.isExpanded}>
           {chat.isExpanded ? COLLAPSE_LABEL : EXPAND_LABEL}
         </DSButton>
       </div>
@@ -79,8 +79,8 @@ export function Hud({ giveTask }: HudProps): React.JSX.Element {
         </p>
       )}
       <div className="hud__chat">
-        <DSInput id={CHAT_FIELD_ID} value={chat.text} onChange={chat.setText} placeholder={CHAT_PLACEHOLDER} maxLength={MAX_TASK_LENGTH} onKeyDown={handleKeyDown} aria-label="Chat" />
-        <DSButton onClick={chat.send} isDisabled={chat.text.trim() === ''} variant={DSButtonVariant.Primary} icon={SEND_ICON}>
+        <DSInput id={CHAT_FIELD_ID} value={chat.text} onChange={chat.setText} placeholder={CHAT_PLACEHOLDER} maxLength={MAX_TASK_LENGTH} onKeyDown={submitOnEnter(chat.send)} aria-label={CHAT_LABEL} />
+        <DSButton onClick={chat.send} isDisabled={isBlank(chat.text)} variant={DSButtonVariant.Primary} icon={SEND_ICON}>
           {SEND_LABEL}
         </DSButton>
       </div>

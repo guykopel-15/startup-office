@@ -13,6 +13,11 @@ import type { AgentEvent, AgentRun, ClaudeAvailability, StartRunInput } from '@s
 
 export const CLAUDE_AVAILABILITY_QUERY_KEY = ['agents', 'availability'] as const;
 
+/** What the renderer starts: the main-process input plus, for a quest, the task the run belongs to. */
+export interface StartRunRequest extends StartRunInput {
+  taskId?: string;
+}
+
 /** Whether `claude` is installed and logged in; checked once per app session. */
 export function useClaudeAvailability(): UseQueryResult<ClaudeAvailability, Error> {
   return useQuery({
@@ -43,12 +48,16 @@ export function useAgentEventsSubscription(): void {
   }, []);
 }
 
-/** Queues a run in main and registers it locally so events have somewhere to land. */
-export function useStartRun(): UseMutationResult<string, Error, StartRunInput> {
+/**
+ * Queues a run in main and registers it locally so events have somewhere to land. A quest's task
+ * is attached in the same tick as the registration, so a `done` event can never outrun it.
+ */
+export function useStartRun(): UseMutationResult<string, Error, StartRunRequest> {
   return useMutation({
-    mutationFn: async (input: StartRunInput): Promise<string> => {
+    mutationFn: async ({ taskId, ...input }: StartRunRequest): Promise<string> => {
       const runId = unwrapResponse(await window.office.agents.start(input));
       useRunsStore.getState().registerRun({ id: runId, floorId: input.floorId, figureId: input.figureId, prompt: input.prompt, mode: input.mode });
+      if (taskId !== undefined) useTasksStore.getState().attachRun(taskId, runId);
       return runId;
     },
   });
