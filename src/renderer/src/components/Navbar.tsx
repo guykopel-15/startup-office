@@ -1,5 +1,6 @@
 import { DSButton } from '../designKit';
 import { selectActiveFigures, useFloorsStore } from '../store/floorsStore';
+import { useSettingsStore } from '../store/settingsStore';
 import { RepoStatusChip } from './RepoStatusChip';
 
 import type React from 'react';
@@ -18,10 +19,16 @@ const ADD_FIGURE_ICON = '+';
 const AGENTS_LABEL = 'Agents';
 const AGENTS_HINT = 'Open the agent panel for this floor';
 const AGENTS_ICON = '▤';
+const MUTE_LABEL = 'Mute sounds';
+const UNMUTE_LABEL = 'Unmute sounds';
+const SOUND_ON_ICON = '🔊';
+const SOUND_OFF_ICON = '🔇';
 
 export function Navbar({ onAddFigure, onOpenFigure }: NavbarProps): React.JSX.Element {
   const hasActiveFloor = useFloorsStore((state): boolean => state.activeFloorId !== null);
   const firstFigureId = useFloorsStore((state): string | null => selectActiveFigures(state)[0]?.id ?? null);
+  const isMuted = useSettingsStore((state): boolean => state.isMuted);
+  const toggleMuted = useSettingsStore((state): typeof state.toggleMuted => state.toggleMuted);
   const handleOpenAgents = (): void => {
     if (firstFigureId !== null) onOpenFigure(firstFigureId);
   };
@@ -35,6 +42,9 @@ export function Navbar({ onAddFigure, onOpenFigure }: NavbarProps): React.JSX.El
       </div>
       <div className="navbar__actions">
         <RepoStatusChip />
+        <DSButton onClick={toggleMuted} icon={isMuted ? SOUND_OFF_ICON : SOUND_ON_ICON} title={isMuted ? UNMUTE_LABEL : MUTE_LABEL}>
+          {isMuted ? UNMUTE_LABEL : MUTE_LABEL}
+        </DSButton>
         <DSButton onClick={handleOpenAgents} isDisabled={firstFigureId === null} title={AGENTS_HINT} icon={AGENTS_ICON}>
           {AGENTS_LABEL}
         </DSButton>

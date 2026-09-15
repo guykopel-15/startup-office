@@ -6,6 +6,7 @@ import { FigureState } from '@shared/figures';
 import { SprintStatus } from '@shared/sprints';
 import { unwrapResponse } from '@shared/response';
 import { useFloorsStore } from '../store/floorsStore';
+import { rewardRun } from '../store/rewards';
 import { useRunsStore } from '../store/runsStore';
 import { selectSprintForFloor, useSprintsStore } from '../store/sprintsStore';
 import { useTasksStore } from '../store/tasksStore';
@@ -42,7 +43,7 @@ function isFloorInMeeting(floorId: string): boolean {
   return selectSprintForFloor(useSprintsStore.getState(), floorId)?.status === SprintStatus.Planning;
 }
 
-/** Applies run events to the runs store, mirrors the run status onto the figure and closes its task. Mount once, in App. */
+/** Applies run events to the runs store, mirrors the run status onto the figure, closes its task and pays out XP. Mount once, in App. */
 export function useAgentEventsSubscription(): void {
   useEffect((): (() => void) => {
     return window.office.agents.onEvent((event: AgentEvent): void => {
@@ -51,7 +52,9 @@ export function useAgentEventsSubscription(): void {
       if (run === undefined || event.type === 'chunk') return;
       // During a planning meeting everyone stays at the table; the plan decides who works next.
       if (!isFloorInMeeting(run.floorId)) useFloorsStore.getState().setFigureState(run.floorId, run.figureId, FIGURE_STATE_BY_RUN_STATUS[event.status]);
-      if (event.type === 'done') useTasksStore.getState().finishRun(run);
+      if (event.type !== 'done') return;
+      useTasksStore.getState().finishRun(run);
+      rewardRun(run);
     });
   }, []);
 }
