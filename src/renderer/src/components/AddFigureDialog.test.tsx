@@ -6,7 +6,8 @@ vi.mock('phaser', () => ({ default: {} }));
 
 import { DEFAULT_FIGURES, RoomKey } from '@shared/figures';
 import { getFurniture } from '../game/world/furniture';
-import { useFiguresStore } from '../store/figuresStore';
+import { useFloorsStore } from '../store/floorsStore';
+import { FloorSourceKind } from '@shared/floors';
 import { AddFigureDialog } from './AddFigureDialog';
 import { buildRoomOptions, defaultRolePrompt, emptyForm, validateAddFigureForm } from './addFigureForm';
 
@@ -24,8 +25,14 @@ beforeAll((): void => {
   HTMLCanvasElement.prototype.getContext = vi.fn().mockReturnValue(null) as unknown as typeof HTMLCanvasElement.prototype.getContext;
 });
 
-afterEach((): void => {
-  useFiguresStore.setState({ figures: [...DEFAULT_FIGURES] });
+function activeFigures(): Figure[] {
+  return useFloorsStore.getState().floors[0]?.figures ?? [];
+}
+
+beforeEach((): void => {
+  useFloorsStore.setState({ floors: [], activeFloorId: null });
+  const floor = useFloorsStore.getState().createFloor({ name: 'Test', source: { kind: FloorSourceKind.Local, path: '/tmp/x' } });
+  DEFAULT_FIGURES.forEach((figure: Figure): void => useFloorsStore.getState().appendFigure(floor.id, figure));
 });
 
 describe('validateAddFigureForm', () => {
@@ -80,24 +87,24 @@ describe('AddFigureDialog', () => {
   });
 
   it('shows errors instead of adding when fields are empty', () => {
-    const before = useFiguresStore.getState().figures.length;
+    const before = activeFigures().length;
     render(<AddFigureDialog isOpen onClose={vi.fn()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Add to office' }));
     expect(screen.getAllByRole('alert')).toHaveLength(2);
     expect(screen.getByLabelText('Name')).toHaveAttribute('aria-invalid', 'true');
-    expect(useFiguresStore.getState().figures).toHaveLength(before);
+    expect(activeFigures()).toHaveLength(before);
   });
 
   it('adds a figure to the chosen department and closes', async () => {
     const user = userEvent.setup();
     const handleClose = vi.fn();
-    const before = useFiguresStore.getState().figures.length;
+    const before = activeFigures().length;
     render(<AddFigureDialog isOpen onClose={handleClose} />);
     await user.type(screen.getByLabelText('Name'), 'Ella');
     await user.type(screen.getByLabelText('Job'), 'Mobile dev');
     await user.selectOptions(screen.getByLabelText('Department'), RoomKey.Sales);
     await user.click(screen.getByRole('button', { name: 'Add to office' }));
-    const figures = useFiguresStore.getState().figures;
+    const figures = activeFigures();
     expect(figures).toHaveLength(before + 1);
     const added = figures[figures.length - 1] as Figure;
     expect(added.room).toBe(RoomKey.Sales);

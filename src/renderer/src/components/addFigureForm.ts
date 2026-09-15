@@ -1,12 +1,12 @@
 import { Accessory, DEFAULT_LOOK, HairStyle, JOB_MAX_LENGTH, NAME_MAX_LENGTH, RoomKey } from '@shared/figures';
 import { ROOMS } from '../game/world/floorPlan';
-import { countFreeDesks, findRoomWithFreeDesk } from '../store/figuresStore';
+import { countFreeDesks, findRoomWithFreeDesk } from '../store/seating';
 
 import type { Figure } from '@shared/figures';
 import type { DSSelectOption } from '../designKit';
 import type { Room } from '../game/world/floorPlan';
 import type { Furniture } from '../game/world/furniture';
-import type { NewFigureInput } from '../store/figuresStore';
+import type { NewFigureInput } from '../store/seating';
 
 export type AddFigureFormValues = NewFigureInput;
 

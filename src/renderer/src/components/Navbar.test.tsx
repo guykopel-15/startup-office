@@ -1,24 +1,14 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { vi } from 'vitest';
 
-import { IDLE_REPO_STATUS } from '@shared/repo';
+import { FloorSourceKind } from '@shared/floors';
 import { Navbar } from './Navbar';
+import { useFloorsStore } from '../store/floorsStore';
 
 import type React from 'react';
 
-const TEST_VERSION = 'test';
-const TEST_PLATFORM = 'darwin';
-
-function renderNavbar(onAddFigure: () => void = vi.fn(), onLoadRepo: () => void = vi.fn()): void {
-  window.office = { version: TEST_VERSION, platform: TEST_PLATFORM, repo: { load: vi.fn(), getStatus: vi.fn().mockResolvedValue({ isOk: true, data: IDLE_REPO_STATUS }), onStatus: vi.fn().mockReturnValue((): void => undefined) } };
-  const client = new QueryClient();
-  const tree: React.ReactNode = (
-    <QueryClientProvider client={client}>
-      <Navbar onAddFigure={onAddFigure} onLoadRepo={onLoadRepo} />
-    </QueryClientProvider>
-  );
-  render(tree);
+function renderNavbar(onAddFigure: () => void = vi.fn()): void {
+  render(<Navbar onAddFigure={onAddFigure} />);
 }
 
 describe('Navbar', () => {
@@ -27,14 +17,16 @@ describe('Navbar', () => {
     expect(screen.getByText('Startup Office')).toBeInTheDocument();
   });
 
-  it('opens the two dialogs from their buttons and shows the repo chip', () => {
+  it('disables Add figure until a floor exists and shows the active floor in the chip', () => {
+    useFloorsStore.setState({ floors: [], activeFloorId: null });
     const handleAddFigure = vi.fn();
-    const handleLoadRepo = vi.fn();
-    renderNavbar(handleAddFigure, handleLoadRepo);
-    fireEvent.click(screen.getByRole('button', { name: 'Load repo' }));
+    renderNavbar(handleAddFigure);
+    expect(screen.getByRole('button', { name: 'Add figure' })).toBeDisabled();
+    expect(screen.getByRole('status')).toHaveTextContent('No floor');
+    act((): void => {
+      useFloorsStore.getState().createFloor({ name: 'Loop', source: { kind: FloorSourceKind.Local, path: '/tmp/loop' } });
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Add figure' }));
-    expect(handleLoadRepo).toHaveBeenCalledTimes(1);
     expect(handleAddFigure).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole('status')).toHaveTextContent('No repo');
   });
 });

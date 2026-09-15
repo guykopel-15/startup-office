@@ -11,8 +11,11 @@ around a lobby corridor. In each room sit pixel figures, one per job. Every figu
 with its own role prompt. The player is the CEO and is not a figure: the CEO watches
 the office from above, clicks figures to talk, gives tasks, and watches work flow.
 
-Pasting a GitHub repo URL in the Load repo dialog loads a "new world": the app clones the repo,
-and every figure reads the slice of it that matches its job and reports back.
+Every repository is a **floor**: a side panel lists floors as tabs, like workspaces in a terminal
+multiplexer. A new floor takes a GitHub URL (cloned into the app data folder) or a local folder,
+then hires a default team one figure at a time behind a progress bar. Each floor owns its figures
+and repo status; the office shows the active floor. From the agent runner on, every figure reads
+the slice of the repo that matches its job and reports back.
 
 ## 2. Decisions (locked)
 
@@ -55,7 +58,8 @@ two spare desks; a full department is disabled in the dialog.
 │   └─ IPC bridge       typed channels, exposed via preload contextBridge   │
 │                                                                           │
 │  Renderer (React + Phaser)                                                │
-│   ├─ <Navbar>         Load repo + Add figure dialogs, repo status chip     │
+│   ├─ <FloorsPanel>    tabs per floor, New floor dialog with progress       │
+│   ├─ <Navbar>         Add figure dialog, active floor repo chip           │
 │   ├─ <GameCanvas>     Phaser scene: tilemap, rooms, figures, CEO, camera  │
 │   ├─ <HUD>            bottom bar: company stats, quest log, chat, minimap  │
 │   ├─ <DialogBox>      MapleStory-style NPC dialog                         │
@@ -65,8 +69,8 @@ two spare desks; a full department is disabled in the dialog.
 
 Phaser and React share one event bus (`EventEmitter` in the renderer). Phaser emits
 `figure:clicked`, `ceo:nearFigure`; React emits `figure:setState`, `figure:walkTo`.
-Game state lives in a Zustand store (`store/figuresStore.ts`); Phaser subscribes and seats
-figures it has not seen, and never owns the state.
+Game state lives in a Zustand store (`store/floorsStore.ts`: floors, active floor, figures per
+floor); Phaser subscribes, mirrors the active floor's figures, and never owns the state.
 
 ## 5. Data model
 
@@ -122,7 +126,12 @@ enum RepoState { Idle, Cloning, Ready, Error }
 /** Live repo status pushed from main; World keeps the persisted subset. */
 interface RepoStatus { state: RepoState; url: string | null; fullName: string | null; path: string | null; message: string | null }
 
-interface World { repoUrl: string | null; repoPath: string | null; companyName: string; money: number; hp: number }
+type FloorSource = { kind: 'github'; url: string } | { kind: 'local'; path: string };
+enum FloorSetupStep { PreparingRepo, CreatingFigures, Ready, Error }
+interface FloorSetupProgress { step: FloorSetupStep; fraction: number; label: string; error: string | null }
+
+/** One repository and its team. Replaces the earlier single World. */
+interface Floor { id: string; name: string; source: FloorSource; repoStatus: RepoStatus; figures: Figure[]; setup: FloorSetupProgress }
 ```
 
 ## 6. Agent runner
@@ -159,7 +168,8 @@ interface World { repoUrl: string | null; repoPath: string | null; companyName: 
 | `git` not found | Load repo dialog shows "git is not installed or not on PATH", chip red |
 | Load while a clone runs | Dialog shows "A repository is already being cloned" |
 | git waits for credentials | Prompts are disabled (`GIT_TERMINAL_PROMPT=0`), so git fails fast; any git run is killed after 5 minutes |
-| Clone fails | Dialog shows the last git line as the error, chip turns red with that repo's name, the half clone is deleted so the next try starts clean |
+| Clone fails | The floor's progress bar turns red with the last git line, its tab dot turns red, the half clone is deleted; close the tab and try again |
+| Local folder missing | Progress bar shows "That folder does not exist" |
 | Agent exit ≠ 0 | Figure `error`, red bubble, full stderr in AgentPanel, retry button |
 | Concurrency cap hit | Task shows "queued", figure walks to desk and waits |
 | Corrupt JSON state | Backup file renamed `.bak`, fresh defaults loaded, warning shown |
@@ -186,10 +196,11 @@ One task = one branch = one PR, in order.
 | 4 | Office style | Rebuild to the owner's design package: opaque walls, windows, decor, floors, furniture kits |
 | 5 | Add figure | Dialog with department, job, look and role prompt; new figure sits at a free desk |
 | 6 | Repo intake | Load repo dialog, shallow clone via git, status chip in the navbar |
-| 7 | Agent runner | `claude -p` per figure, streamed to AgentPanel, intake run on repo load |
-| 8 | Figure states | idle / working / done / error animations, speech bubbles, desk screens |
-| 9 | NPC dialog + HUD chat | Click a figure, give a task, task routes to the assignee |
-| 10 | Meeting room + sprints | Sprint board, figures walk to planning, confetti on close |
-| 11 | XP + juice | Levels, level-up burst, failed numbers, sounds |
-| 12 | Persistence | Figures, tasks, sprints, world survive restart |
-| 13 | Polish + README | Screenshots, GIF, packaging with electron-builder |
+| 7 | Floors | Side panel with a tab per repository, New floor dialog with a progress bar, default team per floor |
+| 8 | Agent runner | `claude -p` per figure, streamed to AgentPanel, intake run on repo load |
+| 9 | Figure states | idle / working / done / error animations, speech bubbles, desk screens |
+| 10 | NPC dialog + HUD chat | Click a figure, give a task, task routes to the assignee |
+| 11 | Meeting room + sprints | Sprint board, figures walk to planning, confetti on close |
+| 12 | XP + juice | Levels, level-up burst, failed numbers, sounds |
+| 13 | Persistence | Figures, tasks, sprints, world survive restart |
+| 14 | Polish + README | Screenshots, GIF, packaging with electron-builder |

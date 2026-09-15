@@ -20,7 +20,8 @@ export async function captureWindowToFile(window: BrowserWindow, outputPath: str
   if (scriptPath !== undefined) {
     const script = await readFile(scriptPath, 'utf8');
     try {
-      await window.webContents.executeJavaScript(script);
+      const result: unknown = await window.webContents.executeJavaScript(script);
+      if (result !== undefined) logger.info('screenshot script returned', result);
     } catch (error: unknown) {
       logger.error('screenshot script failed', { scriptPath, error });
       throw error;
