@@ -3,11 +3,13 @@ import { vi } from 'vitest';
 vi.mock('phaser', () => ({ default: {} }));
 
 import { Accessory, DEFAULT_FIGURES, HairStyle } from '@shared/figures';
-import { BLINK_EYE_ROWS, FIGURE_HEIGHT, FIGURE_WIDTH } from './chibiTemplate';
+import { BLINK_EYE_ROWS, FIGURE_HEIGHT, FIGURE_WIDTH, TYPING_FRAMES } from './chibiTemplate';
 import { TYPING_FRAME_COUNT, applyOverlay, buildFigurePalette, composeBlinkRows, composeFigureRows, composeTypingRows, mixColor } from './composeFigure';
-import { getFrameWidth, parsePixelRows } from './pixelArt';
+import { TRANSPARENT_PIXEL, getFrameWidth, parsePixelRows } from './pixelArt';
 
 import type { Figure, FigureLook } from '@shared/figures';
+import type { Overlay } from './chibiTemplate';
+import type { PixelPoint } from './pixelArt';
 
 const PLAIN_LOOK: FigureLook = {
   hairStyle: HairStyle.Short,
@@ -39,7 +41,7 @@ describe('applyOverlay', () => {
     expect(result).toEqual(['aaa', 'bXb', 'ccc']);
   });
 
-  it('erases base pixels where the overlay uses a space', () => {
+  it('erases base pixels where the overlay uses a space', (): void => {
     expect(applyOverlay(['abc'], { offsetY: 0, rows: [' X.'] })).toEqual(['.Xc']);
   });
 
@@ -88,15 +90,18 @@ describe('composeFigureRows', () => {
   });
 });
 
-describe('composeTypingRows', () => {
+const ARM_COLUMN = 1;
+
+describe('composeTypingRows', (): void => {
   it('keeps the template size, differs per frame, and brings the arms in from the sides', (): void => {
     const palette = buildFigurePalette(PLAIN_LOOK);
-    const frames = Array.from({ length: TYPING_FRAME_COUNT }, (_, index: number): string[] => composeTypingRows(PLAIN_LOOK, index));
+    const firstPose = TYPING_FRAMES[0] as Overlay;
+    const frames = Array.from({ length: TYPING_FRAME_COUNT }, (_: unknown, index: number): string[] => composeTypingRows(PLAIN_LOOK, index));
     frames.forEach((rows: string[]): void => {
       expect(rows).toHaveLength(FIGURE_HEIGHT);
       expect(getFrameWidth(rows)).toBe(FIGURE_WIDTH);
-      expect(() => parsePixelRows(rows, palette)).not.toThrow();
-      expect(rows[17]?.[1]).toBe('.');
+      expect((): PixelPoint[] => parsePixelRows(rows, palette)).not.toThrow();
+      expect(rows[firstPose.offsetY]?.[ARM_COLUMN]).toBe(TRANSPARENT_PIXEL);
     });
     expect(frames[0]).not.toEqual(frames[1]);
     expect(frames[0]).not.toEqual(composeFigureRows(PLAIN_LOOK));

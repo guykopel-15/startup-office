@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 
-import { GAME_FONT_FAMILY, HALF } from '@shared/theme';
+import { GAME_FONT_FAMILY, GAME_TEXT_RESOLUTION, HALF } from '@shared/theme';
 import { RugColor, getRugs } from './decor';
 import { fillQuad, rectCorners } from './drawPrism';
 import { FloorKind, PLAN_RECT, ROOMS } from './floorPlan';
@@ -22,7 +22,6 @@ const RUG_BORDER = 0.25;
 const LABEL_FONT_SIZE = '6px';
 const LABEL_FONT_STYLE = 'bold';
 const LABEL_ALPHA = 0.5;
-const LABEL_RESOLUTION = 4;
 const CORRIDOR_LABEL_GX = 5;
 const LABEL_CORNER_INSET_X = 3.2;
 const LABEL_CORNER_INSET_Y = 1.4;
@@ -122,7 +121,7 @@ function labelAnchor(room: Room): GridPoint {
 function createLabel(scene: Phaser.Scene, origin: ScreenPoint, room: Room): void {
   const point = projectToScreen(labelAnchor(room));
   scene.add
-    .text(origin.x + point.x, origin.y + point.y, room.name, { fontFamily: GAME_FONT_FAMILY, fontSize: LABEL_FONT_SIZE, color: PALETTE.labelText, fontStyle: LABEL_FONT_STYLE, resolution: LABEL_RESOLUTION })
+    .text(origin.x + point.x, origin.y + point.y, room.name, { fontFamily: GAME_FONT_FAMILY, fontSize: LABEL_FONT_SIZE, color: PALETTE.labelText, fontStyle: LABEL_FONT_STYLE, resolution: GAME_TEXT_RESOLUTION })
     .setOrigin(HALF, HALF)
     .setAlpha(LABEL_ALPHA)
     .setDepth(DEPTH_LABEL);

@@ -2,11 +2,11 @@ import { FigureState } from '@shared/figures';
 
 import type { PixelFrame, PixelPalette } from './pixelArt';
 
-/** Small pixel badges shown above a figure's name tag. Tokens: G green, R red, Y yellow, W white, D dark. */
+/** Small pixel badges shown above a figure's name tag. Tokens: G green, R red, O orange, W white, D dark. */
 export const BADGE_PALETTE: PixelPalette = {
-  G: '#5fe089',
+  G: '#3fbf6f',
   R: '#ff4d6d',
-  Y: '#ffd866',
+  O: '#e8801a',
   W: '#f1ecff',
   D: '#0e0a1a',
 };
@@ -21,12 +21,12 @@ export enum BadgeKey {
 }
 
 export const BADGE_FRAMES: readonly PixelFrame[] = [
-  { key: BadgeKey.Done, rows: ['DDDDDDDDD', 'DWWWWWWWD', 'DWWWWWGWD', 'DWGWWGGWD', 'DWGGGGWWD', 'DWWGGWWWD', 'DWWWWWWWD', 'DDDDDDDDD'] },
-  { key: BadgeKey.Error, rows: ['DDDDDDDDD', 'DWWWWWWWD', 'DWRWWWRWD', 'DWWRWRWWD', 'DWWWRWWWD', 'DWWRWRWWD', 'DWRWWWRWD', 'DDDDDDDDD'] },
-  { key: BadgeKey.Queued, rows: ['DDDDDDDDD', 'DWWWWWWWD', 'DWDDDDDWD', 'DWWDDDWWD', 'DWWWDWWWD', 'DWWDDDWWD', 'DWDDDDDWD', 'DDDDDDDDD'] },
-  { key: BadgeKey.WorkingOne, rows: ['DDDDDDDDD', 'DWWWWWWWD', 'DWWWWWWWD', 'DWYWWWWWD', 'DWYWWWWWD', 'DWWWWWWWD', 'DWWWWWWWD', 'DDDDDDDDD'] },
-  { key: BadgeKey.WorkingTwo, rows: ['DDDDDDDDD', 'DWWWWWWWD', 'DWWWWWWWD', 'DWYWYWWWD', 'DWYWYWWWD', 'DWWWWWWWD', 'DWWWWWWWD', 'DDDDDDDDD'] },
-  { key: BadgeKey.WorkingThree, rows: ['DDDDDDDDD', 'DWWWWWWWD', 'DWWWWWWWD', 'DWYWYWYWD', 'DWYWYWYWD', 'DWWWWWWWD', 'DWWWWWWWD', 'DDDDDDDDD'] },
+  { key: BadgeKey.Done, rows: ['DDDDDDDDDDD', 'DWWWWWWWWWD', 'DWWWWWWWGWD', 'DWWWWWWGGWD', 'DWGWWWGGWWD', 'DWGGWGGWWWD', 'DWWGGGWWWWD', 'DWWWGWWWWWD', 'DWWWWWWWWWD', 'DDDDDDDDDDD'] },
+  { key: BadgeKey.Error, rows: ['DDDDDDDDDDD', 'DWWWWWWWWWD', 'DWRRWWWRRWD', 'DWWRRWRRWWD', 'DWWWRRRWWWD', 'DWWWRRRWWWD', 'DWWRRWRRWWD', 'DWRRWWWRRWD', 'DWWWWWWWWWD', 'DDDDDDDDDDD'] },
+  { key: BadgeKey.Queued, rows: ['DDDDDDDDDDD', 'DWWWWWWWWWD', 'DWWDDDDDWWD', 'DWWWDDDWWWD', 'DWWWWDWWWWD', 'DWWWWDWWWWD', 'DWWWDDDWWWD', 'DWWDDDDDWWD', 'DWWWWWWWWWD', 'DDDDDDDDDDD'] },
+  { key: BadgeKey.WorkingOne, rows: ['DDDDDDDDDDD', 'DWWWWWWWWWD', 'DWWWWWWWWWD', 'DWWWWWWWWWD', 'DWOOWWWWWWD', 'DWOOWWWWWWD', 'DWWWWWWWWWD', 'DWWWWWWWWWD', 'DWWWWWWWWWD', 'DDDDDDDDDDD'] },
+  { key: BadgeKey.WorkingTwo, rows: ['DDDDDDDDDDD', 'DWWWWWWWWWD', 'DWWWWWWWWWD', 'DWWWWWWWWWD', 'DWOOWOOWWWD', 'DWOOWOOWWWD', 'DWWWWWWWWWD', 'DWWWWWWWWWD', 'DWWWWWWWWWD', 'DDDDDDDDDDD'] },
+  { key: BadgeKey.WorkingThree, rows: ['DDDDDDDDDDD', 'DWWWWWWWWWD', 'DWWWWWWWWWD', 'DWWWWWWWWWD', 'DWOOWOOWOOD', 'DWOOWOOWOOD', 'DWWWWWWWWWD', 'DWWWWWWWWWD', 'DWWWWWWWWWD', 'DDDDDDDDDDD'] },
 ];
 
 export const WORKING_BADGE_KEYS: readonly BadgeKey[] = [BadgeKey.WorkingOne, BadgeKey.WorkingTwo, BadgeKey.WorkingThree];

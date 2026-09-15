@@ -4,7 +4,7 @@
 
 | Version | Date | Changes |
 |---|---|---|
-| 1.0.8 | 2026-09-15 | **Added:** figure states in the office: a typing animation (arms on the keyboard) while a figure works, a badge above the name tag (animated dots while working, green tick when done, red cross on error) and a MapleStory-style speech bubble that shows the figure's latest output line, tool note, first result line or error, so on load you watch the whole team read the repo. **Changed:** the scene now diffs figure state and run output from the stores instead of only seating and removing figures |
+| 1.0.8 | 2026-09-15 | **Added:** figure states in the office: a typing animation (arms on the keyboard) while a figure works, a badge above the name tag (animated dots while working, green tick when done, red cross on error) and a MapleStory-style speech bubble that shows the figure's latest output line, tool note, first result line, error, or "Stopped." when you stop it, so on load you watch the whole team read the repo. **Changed:** the scene now diffs figure state and run output from the stores instead of only seating and removing figures |
 | 1.0.7 | 2026-09-15 | **Added:** agent runner: every figure can run a real `claude` session on its floor's repository; when a floor becomes ready each figure automatically reads the repo from its role's point of view (three sessions at a time, the rest queued); agent panel opened by clicking a figure or the Agents button, with the role prompt (editable), an ask/assign box, Read the repo, Run and Stop, live streamed output with tool notes, result, turns, and earlier runs; `claude` availability check with an inline hint when it is missing. **Changed:** figure state follows its run (working, done, error) |
 | 1.0.6 | 2026-09-14 | **Added:** floors: a side panel with one tab per repository, like workspaces in a terminal multiplexer; New floor dialog takes a GitHub URL or a local folder (with a native Browse picker), then shows a progress bar while the repo is prepared and the default team is hired one figure at a time; each floor has its own figures and repo status; empty-office state; `DSProgressBar`. **Changed:** Load repo dialog and single global repo status replaced by floors; repo IPC takes a floor id; Add figure works on the active floor. |
 | 1.0.5 | 2026-09-14 | **Added:** Load repo dialog: paste a GitHub URL, the main process clones it shallowly into the app data folder (or pulls when it is already there) and pushes status over IPC; navbar chip with the repo name and a state dot (cloning, ready, failed); typed IPC bridge (`window.office.repo`), controller + service split, standard `successResponse` / error shape, TanStack Query hooks for main-process data. **Changed:** Load repo button enabled; app name pinned to `startup-office` so packaged builds use the same data folder as dev; review fixes: status is fetched on start, git never prompts and times out, broken clones are re-cloned, Enter submits the URL |
@@ -47,7 +47,7 @@ colors, so adding a new employee is a data change, not new art.
 
 Every figure is an agent. Behind it runs a real `claude` CLI session with a role
 prompt and your repo as its working directory. When a figure is working, it sits at
-its desk typing, and its screen fills with the live output of the agent.
+its desk typing, and a speech bubble above it shows the agent's latest line.
 
 ## How you play
 
@@ -65,7 +65,7 @@ its desk typing, and its screen fills with the live output of the agent.
 3. **Talk.** Click a figure. The agent panel opens with its role prompt, its live output and a
    box to ask or assign something. When a floor becomes ready every figure has already started
    reading the repo from its own point of view; you can watch the sessions stream in. In the
-   office each working figure types, a dotted badge blinks above its name, and a speech bubble
+   office each working figure types, animated dots count above its name, and a speech bubble
    says what it is doing right now. A green tick means done, a red cross means the run failed.
 
    ![Figures working](docs/images/figure-states.png)
@@ -87,7 +87,7 @@ its desk typing, and its screen fills with the live output of the agent.
 | Element | What you get |
 |---|---|
 | World | Isometric floor plan: seven rooms around a lobby corridor, opaque walls with windows and decor, per-room floors and furniture |
-| Characters | 4-direction walk cycles, idle bounce, desk typing animation |
+| Characters | Idle bounce, desk typing animation, 4-direction walk cycles (task 11) |
 | Floors | Side panel with one tab per repository; each floor has its own team |
 | HUD | Bottom bar: company stats, quest log, chat, minimap |
 | Dialog | MapleStory-style NPC dialog box for every figure |
@@ -123,8 +123,8 @@ Other scripts: `npm test`, `npm run typecheck`, `npm run build`, `npm run icon` 
 when launching to capture the window to a file and quit, which is how the README images are made.
 `STARTUP_OFFICE_WINDOW=300x600` opens the window at a given size, for checking small layouts.
 `STARTUP_OFFICE_SCRIPT=<file>` (together with `STARTUP_OFFICE_SCREENSHOT`) runs a script in the page
-before the capture, to open dialogs or fill forms; `npm run screenshot-scripts` writes the four page scripts used
-for the README images into `scripts/screenshots/generated/` (`loadRepoDone.js` performs a real clone of this repo). All three variables are ignored in packaged builds. The app works down to a 300px wide window:
+before the capture, to open dialogs or fill forms; `npm run screenshot-scripts` writes the six page scripts used
+for the README images into `scripts/screenshots/generated/` (`floorsReady.js` clones this repo; `figureStates.js` runs real `claude` sessions on a local folder and waits 45 s, or `--hold-ms=<n>`, for the badges and bubbles). All three variables are ignored in packaged builds. The app works down to a 300px wide window:
 
 ![The office in a 300px window](docs/images/office-300px.png)
 

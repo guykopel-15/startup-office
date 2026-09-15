@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 
-import { RunStatus } from '@shared/agents';
+import { RunStatus, TOOL_NOTE_PREFIX } from '@shared/agents';
 
 import type React from 'react';
 import type { AgentRun } from '@shared/agents';
@@ -48,7 +48,7 @@ export function RunOutput({ run, history }: RunOutputProps): React.JSX.Element {
       </div>
       <div className="run-output__log" ref={logRef} aria-live="polite">
         {run.lines.map((line: string, index: number): React.JSX.Element => (
-          <div key={index} className={line.startsWith('▸') ? 'run-output__tool' : 'run-output__line'}>
+          <div key={index} className={line.startsWith(TOOL_NOTE_PREFIX) ? 'run-output__tool' : 'run-output__line'}>
             {line}
           </div>
         ))}

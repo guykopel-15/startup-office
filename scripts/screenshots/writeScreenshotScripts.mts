@@ -18,7 +18,15 @@ const FLOOR_PROGRESS_FILE = 'newFloorProgress.js';
 const FLOORS_READY_FILE = 'floorsReady.js';
 const AGENT_RUN_FILE = 'agentRun.js';
 const FIGURE_STATES_FILE = 'figureStates.js';
-const FIGURE_STATES_HOLD_MS = 45 * 1000;
+const DEFAULT_FIGURE_STATES_HOLD_MS = 45 * 1000;
+const HOLD_ARGUMENT = '--hold-ms=';
+
+/** `--hold-ms=<n>` on the command line overrides how long the figure-states capture waits. */
+function readHoldMs(): number {
+  const argument = process.argv.find((candidate: string): boolean => candidate.startsWith(HOLD_ARGUMENT));
+  const parsed = argument === undefined ? Number.NaN : Number(argument.slice(HOLD_ARGUMENT.length));
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_FIGURE_STATES_HOLD_MS;
+}
 
 mkdirSync(OUTPUT_DIRECTORY, { recursive: true });
 writeFileSync(join(OUTPUT_DIRECTORY, DIALOG_FILE), buildFillScript(SAMPLE_FIGURE, false));
@@ -28,5 +36,5 @@ if (firstFloor === undefined) throw new Error('need a sample floor');
 writeFileSync(join(OUTPUT_DIRECTORY, FLOOR_PROGRESS_FILE), buildNewFloorProgressScript(firstFloor));
 writeFileSync(join(OUTPUT_DIRECTORY, FLOORS_READY_FILE), buildFloorsReadyScript(SAMPLE_FLOORS));
 writeFileSync(join(OUTPUT_DIRECTORY, AGENT_RUN_FILE), buildAgentRunScript());
-writeFileSync(join(OUTPUT_DIRECTORY, FIGURE_STATES_FILE), buildFigureStatesScript(FIGURE_STATES_HOLD_MS));
+writeFileSync(join(OUTPUT_DIRECTORY, FIGURE_STATES_FILE), buildFigureStatesScript(readHoldMs()));
 process.stdout.write(`wrote ${[DIALOG_FILE, SEATED_FILE, FLOOR_PROGRESS_FILE, FLOORS_READY_FILE, AGENT_RUN_FILE, FIGURE_STATES_FILE].join(', ')} to ${OUTPUT_DIRECTORY}\n`);
