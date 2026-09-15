@@ -1,15 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { RunMode, buildIntakePrompt, buildTaskPrompt } from '@shared/agents';
 import { useCancelRun, useStartRun } from '../api/agentQueries';
-import { GameEvent, gameEvents } from '../game/events';
 import { selectActiveFloor, useFloorsStore } from '../store/floorsStore';
 import { isRunActive, selectRunsForFigure, useRunsStore } from '../store/runsStore';
 
 import type { AgentRun } from '@shared/agents';
 import type { Figure } from '@shared/figures';
 import type { Floor } from '@shared/floors';
-import type { FigureClickedPayload } from '../game/events';
 
 export interface AgentPanelState {
   floor: Floor | null;
@@ -43,19 +41,6 @@ interface PanelContext {
   setFigureId: (figureId: string | null) => void;
 }
 
-/** The figure the panel shows: the last one clicked in the office, or one picked in the select. */
-function useSelectedFigureId(): [string | null, (figureId: string | null) => void] {
-  const [figureId, setFigureId] = useState<string | null>(null);
-  useEffect((): (() => void) => {
-    const handleFigureClicked = (payload: FigureClickedPayload): void => setFigureId(payload.figureId);
-    gameEvents.on(GameEvent.FigureClicked, handleFigureClicked);
-    return (): void => {
-      gameEvents.off(GameEvent.FigureClicked, handleFigureClicked);
-    };
-  }, []);
-  return [figureId, setFigureId];
-}
-
 /** The actions the panel exposes, built from the current context. */
 function panelActions(context: PanelContext): Pick<AgentPanelState, 'selectFigure' | 'setTask' | 'setRolePrompt' | 'runIntake' | 'runTask' | 'stop' | 'close'> {
   const { floor, figure, latestRun, task } = context;
@@ -84,7 +69,8 @@ function panelActions(context: PanelContext): Pick<AgentPanelState, 'selectFigur
 export function useAgentPanel(isClaudeAvailable: boolean): AgentPanelState {
   const floor = useFloorsStore(selectActiveFloor);
   const setRolePromptInStore = useFloorsStore((state): typeof state.setRolePrompt => state.setRolePrompt);
-  const [figureId, setFigureId] = useSelectedFigureId();
+  // Opened from the dialog box's "Show your work", the Agents button or the select; figure clicks open the dialog box.
+  const [figureId, setFigureId] = useState<string | null>(null);
   const [task, setTask] = useState('');
   const startRun = useStartRun();
   const cancelRun = useCancelRun();

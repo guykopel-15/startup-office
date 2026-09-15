@@ -3,9 +3,11 @@ import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { App } from './App';
+import { installDevHooks } from './game/devHooks';
 import './styles/global.css';
 
 document.body.dataset['platform'] = window.office.platform;
+installDevHooks();
 
 const queryClient = new QueryClient();
 

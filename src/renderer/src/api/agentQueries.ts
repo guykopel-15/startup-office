@@ -6,6 +6,7 @@ import { FigureState } from '@shared/figures';
 import { unwrapResponse } from '@shared/response';
 import { useFloorsStore } from '../store/floorsStore';
 import { useRunsStore } from '../store/runsStore';
+import { useTasksStore } from '../store/tasksStore';
 
 import type { UseMutationResult, UseQueryResult } from '@tanstack/react-query';
 import type { AgentEvent, AgentRun, ClaudeAvailability, StartRunInput } from '@shared/agents';
@@ -29,7 +30,7 @@ const FIGURE_STATE_BY_RUN_STATUS: Readonly<Record<RunStatus, FigureState>> = {
   [RunStatus.Cancelled]: FigureState.Idle,
 };
 
-/** Applies run events to the runs store and mirrors the run status onto the figure. Mount once, in App. */
+/** Applies run events to the runs store, mirrors the run status onto the figure and closes its task. Mount once, in App. */
 export function useAgentEventsSubscription(): void {
   useEffect((): (() => void) => {
     return window.office.agents.onEvent((event: AgentEvent): void => {
@@ -37,6 +38,7 @@ export function useAgentEventsSubscription(): void {
       const run = useRunsStore.getState().runs.find((candidate: AgentRun): boolean => candidate.id === event.runId);
       if (run === undefined || event.type === 'chunk') return;
       useFloorsStore.getState().setFigureState(run.floorId, run.figureId, FIGURE_STATE_BY_RUN_STATUS[event.status]);
+      if (event.type === 'done') useTasksStore.getState().finishRun(run);
     });
   }, []);
 }
