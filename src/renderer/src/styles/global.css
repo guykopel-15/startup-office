@@ -5,6 +5,8 @@
   --text: #f1ecff;
   --muted: #8a7fb3;
   --accent: #ffd866;
+  --success: #5fe089;
+  --danger: #ff4d6d;
   --navbar-h: 48px;
   --traffic-lights-width: 80px;
   --floors-panel-width: 200px;
@@ -50,13 +52,14 @@ body,
 .app__stage {
   position: relative;
   flex: 1;
-  min-height: 0;
+  min-height: 200px;
   display: flex;
 }
 
 /* MapleStory-style NPC dialog: portrait on the left, typed text and choices on the right. */
 .dialog-box {
   position: absolute;
+  z-index: 2;
   left: 50%;
   bottom: 12px;
   transform: translateX(-50%);
@@ -141,6 +144,8 @@ body,
   flex-direction: column;
   gap: 6px;
   flex-shrink: 0;
+  max-height: 40vh;
+  overflow-y: auto;
   padding: 8px 12px;
   background: var(--panel);
   border-top: 2px solid var(--border);
@@ -168,11 +173,11 @@ body,
 }
 
 .hud__quest--done {
-  color: #5fe089;
+  color: var(--success);
 }
 
 .hud__quest--failed {
-  color: #ff4d6d;
+  color: var(--danger);
 }
 
 .hud__hint {
@@ -202,7 +207,7 @@ body,
 }
 
 .chat-log--expanded {
-  max-height: 160px;
+  max-height: min(160px, 25vh);
   overflow-y: auto;
 }
 
@@ -226,7 +231,7 @@ body,
 }
 
 .chat-log__message--figure .chat-log__author {
-  color: #5fe089;
+  color: var(--success);
 }
 
 .chat-log__text {
@@ -338,11 +343,11 @@ body,
 }
 
 .floor-tab--ready .floor-tab__dot {
-  background: #5fe089;
+  background: var(--success);
 }
 
 .floor-tab--error .floor-tab__dot {
-  background: #ff4d6d;
+  background: var(--danger);
 }
 
 .floor-tab__close {
@@ -436,7 +441,7 @@ body,
 }
 
 .run-output__status--done {
-  color: #5fe089;
+  color: var(--success);
 }
 
 .run-output__status--error {
@@ -567,7 +572,7 @@ body,
 }
 
 .ds-progress--error .ds-progress__fill {
-  background: #ff4d6d;
+  background: var(--danger);
 }
 
 .ds-progress__label {
@@ -879,7 +884,7 @@ body[data-platform='darwin'] .navbar {
 }
 
 .repo-chip--ready .repo-chip__dot {
-  background: #5fe089;
+  background: var(--success);
 }
 
 .repo-chip--cloning .repo-chip__dot {
@@ -888,7 +893,7 @@ body[data-platform='darwin'] .navbar {
 }
 
 .repo-chip--error .repo-chip__dot {
-  background: #ff4d6d;
+  background: var(--danger);
 }
 
 @keyframes repo-chip-pulse {
@@ -939,9 +944,18 @@ body[data-platform='darwin'] .navbar {
 
 /* Narrow windows: the dialog box drops the portrait, the HUD drops the quest labels. */
 @media (max-width: 480px) {
-  .dialog-box__portrait,
-  .hud__quest-label {
+  .dialog-box__portrait {
     display: none;
+  }
+
+  /* Keep the count's name for assistive tech while hiding it visually. */
+  .hud__quest-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
   }
 
   .dialog-box {

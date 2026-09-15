@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 
 import { RunMode, buildIntakePrompt, buildTaskPrompt } from '@shared/agents';
+import { findFigure } from '@shared/figures';
+import { isBlank } from '@shared/text';
 import { useCancelRun, useStartRun } from '../api/agentQueries';
 import { selectActiveFloor, useFloorsStore } from '../store/floorsStore';
 import { isRunActive, selectRunsForFigure, useRunsStore } from '../store/runsStore';
@@ -54,7 +56,7 @@ function panelActions(context: PanelContext): Pick<AgentPanelState, 'selectFigur
       if (figure !== null) context.start(buildIntakePrompt(figure.rolePrompt, figure.job));
     },
     runTask: (): void => {
-      if (figure === null || task.trim() === '') return;
+      if (figure === null || isBlank(task)) return;
       context.start(buildTaskPrompt(figure.rolePrompt, figure.job, task));
       context.setTask('');
     },
@@ -81,7 +83,7 @@ export function useAgentPanel(isClaudeAvailable: boolean): AgentPanelState {
   const latestRun = runs[runs.length - 1] ?? null;
 
   const figures = floor?.figures ?? [];
-  const figure = figures.find((candidate: Figure): boolean => candidate.id === figureId) ?? null;
+  const figure = findFigure(figures, figureId);
   const cwd = floor?.repoStatus.path ?? null;
   const isBusy = isRunActive(latestRun);
   const canRun = isClaudeAvailable && floor !== null && figure !== null && cwd !== null && !isBusy;

@@ -1,4 +1,4 @@
-import { DSButton, DSButtonVariant, DSField, DSSelect, DSTextArea } from '../designKit';
+import { CLOSE_ICON, DSButton, DSButtonVariant, DSField, DSSelect, DSTextArea } from '../designKit';
 import { RunOutput } from './RunOutput';
 
 import type React from 'react';
@@ -13,7 +13,6 @@ interface AgentPanelProps {
 }
 
 const CLOSE_LABEL = 'Close panel';
-const CLOSE_ICON = '×';
 const FIGURE_LABEL = 'Figure';
 const ROLE_LABEL = 'Role prompt';
 const TASK_LABEL = 'Ask or assign';
