@@ -1,3 +1,4 @@
+import type { AgentEvent, ClaudeAvailability, StartRunInput } from './agents';
 import type { RepoStatus, RepoStatusEvent } from './repo';
 import type { ApiResponse } from './response';
 
@@ -13,12 +14,22 @@ export interface RepoApi {
   onStatus: (listener: (event: RepoStatusEvent) => void) => () => void;
 }
 
+export interface AgentsApi {
+  /** Locates and verifies the `claude` binary. */
+  check: () => Promise<ApiResponse<ClaudeAvailability>>;
+  /** Queues a run; resolves with its id. Output arrives through `onEvent`. */
+  start: (input: StartRunInput) => Promise<ApiResponse<string>>;
+  cancel: (runId: string) => Promise<ApiResponse<null>>;
+  onEvent: (listener: (event: AgentEvent) => void) => () => void;
+}
+
 /** Typed bridge exposed on `window.office` by the preload script. Grows with each task. */
 export interface OfficeApi {
   version: string;
   /** `darwin`, `win32` or `linux`; the renderer uses it for platform-only layout such as the traffic-light inset. */
   platform: string;
   repo: RepoApi;
+  agents: AgentsApi;
 }
 
 declare global {

@@ -136,14 +136,20 @@ interface Floor { id: string; name: string; source: FloorSource; repoStatus: Rep
 
 ## 6. Agent runner
 
-- Command: `claude -p "<prompt>" --output-format stream-json` with `cwd` = repo path.
-- Prompt = figure `rolePrompt` + task description (or the intake prompt on repo load).
-- Intake prompt: "You are the {job}. Explore this repo from your role's point of view.
-  Report: what you own, current state, top 3 risks, top 3 next steps. Under 200 words."
-- Each stdout chunk is forwarded over IPC as `agent:chunk {runId, text}`; the figure's
-  desk screen and the AgentPanel render it live.
-- Exit code 0 → figure `done`, task → `review`, +XP. Non-zero → `error`, task → `failed`.
-- Never run more than N concurrent agents (default 3). Others queue.
+- Command: `claude -p "<prompt>" --output-format stream-json --verbose --max-turns 25` with
+  `cwd` = the floor's repo path. Read-only runs pass `--allowedTools Read Grep Glob`; edit runs
+  (tasks, later) add Edit/Write with `--permission-mode acceptEdits`. No shell, prompts disabled.
+- The binary is found through `STARTUP_OFFICE_CLAUDE`, then PATH, then the usual install
+  locations; `claude --version` proves it works (`agent:check`).
+- Prompt = figure `rolePrompt` + task description (or the intake prompt on floor ready).
+- Intake prompt: role + "Explore this repository from your role's point of view. Report: what
+  you own, its current state, the top 3 risks, and the top 3 next steps. Under 200 words."
+- Stream lines are parsed in main (`claudeStream.ts`): assistant text and tool-use notes become
+  `agent:event {type: chunk}`; the final result carries `result`, `is_error`, cost and turns.
+- `AgentService` queues runs and executes at most 3 at once; `agent:start` answers with the run
+  id at once, events follow; `agent:cancel` kills a running session or drops a queued one.
+- Renderer: `runsStore` keeps runs and their tail of lines; run status mirrors onto the figure
+  (`working`, `done`, `error`); the AgentPanel shows the latest run live and earlier runs.
 - All agent output is treated as data. It is displayed, never executed.
 
 ## 7. Game layer (Phaser)
@@ -197,7 +203,7 @@ One task = one branch = one PR, in order.
 | 5 | Add figure | Dialog with department, job, look and role prompt; new figure sits at a free desk |
 | 6 | Repo intake | Load repo dialog, shallow clone via git, status chip in the navbar |
 | 7 | Floors | Side panel with a tab per repository, New floor dialog with a progress bar, default team per floor |
-| 8 | Agent runner | `claude -p` per figure, streamed to AgentPanel, intake run on repo load |
+| 8 | Agent runner | `claude -p` per figure, streamed to AgentPanel, intake run on floor ready |
 | 9 | Figure states | idle / working / done / error animations, speech bubbles, desk screens |
 | 10 | NPC dialog + HUD chat | Click a figure, give a task, task routes to the assignee |
 | 11 | Meeting room + sprints | Sprint board, figures walk to planning, confetti on close |

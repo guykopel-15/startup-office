@@ -17,6 +17,10 @@ export interface MainConfig {
   windowSize: WindowSizeOverride | undefined;
   /** Dev only: a JavaScript file to run in the page before the screenshot is taken. */
   screenshotScriptPath: string | undefined;
+  /** Optional explicit path to the `claude` binary. */
+  claudeBinary: string | undefined;
+  /** PATH as the app sees it, used to locate `claude`. */
+  pathVariable: string | undefined;
   isDarwin: boolean;
 }
 
@@ -46,6 +50,8 @@ export function readConfig(isPackaged: boolean): MainConfig {
     screenshotPath: isPackaged ? undefined : process.env.STARTUP_OFFICE_SCREENSHOT,
     windowSize: isPackaged ? undefined : parseWindowSize(process.env.STARTUP_OFFICE_WINDOW),
     screenshotScriptPath: isPackaged ? undefined : process.env.STARTUP_OFFICE_SCRIPT,
+    claudeBinary: process.env.STARTUP_OFFICE_CLAUDE,
+    pathVariable: process.env.PATH,
     isDarwin: process.platform === 'darwin',
   };
 }

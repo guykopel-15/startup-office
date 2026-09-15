@@ -4,6 +4,7 @@
 
 | Version | Date | Changes |
 |---|---|---|
+| 1.0.7 | 2026-09-15 | **Added:** agent runner: every figure can run a real `claude` session on its floor's repository; when a floor becomes ready each figure automatically reads the repo from its role's point of view (three sessions at a time, the rest queued); agent panel opened by clicking a figure or the Agents button, with the role prompt (editable), an ask/assign box, Read the repo, Run and Stop, live streamed output with tool notes, result, turns, and earlier runs; `claude` availability check with an inline hint when it is missing. **Changed:** figure state follows its run (working, done, error) |
 | 1.0.6 | 2026-09-14 | **Added:** floors: a side panel with one tab per repository, like workspaces in a terminal multiplexer; New floor dialog takes a GitHub URL or a local folder (with a native Browse picker), then shows a progress bar while the repo is prepared and the default team is hired one figure at a time; each floor has its own figures and repo status; empty-office state; `DSProgressBar`. **Changed:** Load repo dialog and single global repo status replaced by floors; repo IPC takes a floor id; Add figure works on the active floor. |
 | 1.0.5 | 2026-09-14 | **Added:** Load repo dialog: paste a GitHub URL, the main process clones it shallowly into the app data folder (or pulls when it is already there) and pushes status over IPC; navbar chip with the repo name and a state dot (cloning, ready, failed); typed IPC bridge (`window.office.repo`), controller + service split, standard `successResponse` / error shape, TanStack Query hooks for main-process data. **Changed:** Load repo button enabled; app name pinned to `startup-office` so packaged builds use the same data folder as dev; review fixes: status is fetched on start, git never prompts and times out, broken clones are re-cloned, Enter submits the URL |
 | 1.0.4 | 2026-09-14 | **Added:** Add figure dialog (name, job, department with seats left, hair style, accessory, six colors, role prompt, live pixel preview); figures store (Zustand) that seats new figures on the next free desk; the scene subscribes to the store; design kit: `DSModal`, `DSField`, `DSInput`, `DSSelect`, `DSTextArea`, `DSColorInput`; one or two spare desks per department; `STARTUP_OFFICE_SCRIPT` dev hook to drive the page before a capture. **Changed:** Add figure button enabled; plants moved in R&D and Marketing to make room for the spare desks; review fixes: modal keeps focus while typing, traps Tab, restores focus and ignores drags onto the backdrop; selects show a chevron; errors linked to their inputs; store validates text; scene unsubscribes on destroy |
@@ -60,9 +61,11 @@ its desk typing, and its screen fills with the live output of the agent.
    ![New floor progress](docs/images/new-floor-progress.png)
 
    ![Two floors](docs/images/office-floor.png)
-3. **Talk.** Click a figure. A MapleStory-style dialog opens.
-   Read the figure's report or give it a task. You can also type a task in the HUD
-   chat box and the app routes it to the right figure.
+3. **Talk.** Click a figure. The agent panel opens with its role prompt, its live output and a
+   box to ask or assign something. When a floor becomes ready every figure has already started
+   reading the repo from its own point of view; you can watch the sessions stream in.
+
+   ![Agent panel](docs/images/agent-panel.png)
 4. **Run sprints.** Tasks are quests. Open the sprint board in the meeting room, drag
    quests in, and start the sprint. Figures walk to the meeting room for planning,
    then back to their desks to work.
@@ -92,7 +95,7 @@ its desk typing, and its screen fills with the live output of the agent.
 | Shell | Electron |
 | UI | React, TypeScript, Vite, Zustand, TanStack Query |
 | Game | Phaser 3 |
-| Agents | `claude` CLI (`claude -p`, streamed JSON) |
+| Agents | `claude` CLI (`claude -p --output-format stream-json`), read-only tools for intake, three sessions at a time |
 | Storage | JSON files and cloned repositories in the Electron user data folder |
 | Tests | Vitest, Testing Library |
 
@@ -134,7 +137,7 @@ One task = one branch = one pull request, built in order.
 | 5 | Add figure | Dialog with department, job, look and role prompt; new figure sits at a free desk | ✅ |
 | 6 | Repo intake | Load repo dialog, shallow clone via git, status chip in the navbar | ✅ |
 | 7 | Floors | Side panel with a tab per repository, New floor dialog with a progress bar, default team per floor | ✅ |
-| 8 | Agent runner | `claude -p` per figure, streamed to a panel, intake run on repo load | ☐ |
+| 8 | Agent runner | `claude -p` per figure, streamed to a panel, intake run on repo load | ✅ |
 | 9 | Figure states | idle / working / done / error, speech bubbles, desk screens | ☐ |
 | 10 | NPC dialog + HUD chat | Talk to a figure, give a task, it routes to the assignee | ☐ |
 | 11 | Meeting room + sprints | Sprint board, figures walk to planning, confetti on close | ☐ |

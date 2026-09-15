@@ -10,12 +10,16 @@ export const PAGE_HELPERS = `const wait = (milliseconds) => new Promise((resolve
 /** Wraps page-script statements in an async IIFE that resolves to the error message instead of throwing. */
 export function pageScript(body: string): string {
   return `(async () => {
+  const pageErrors = [];
+  window.addEventListener('error', (event) => pageErrors.push('error: ' + event.message));
+  window.addEventListener('unhandledrejection', (event) => pageErrors.push('rejection: ' + (event.reason && event.reason.message ? event.reason.message : String(event.reason))));
   try {
   ${PAGE_HELPERS}
   ${body}
   } catch (error) {
-    return 'page script failed: ' + (error && error.message ? error.message : String(error));
+    return 'page script failed: ' + (error && error.message ? error.message : String(error)) + (pageErrors.length ? ' | ' + pageErrors.join('; ') : '');
   }
+  return pageErrors.length ? 'page errors: ' + pageErrors.join('; ') : undefined;
 })();
 `;
 }
