@@ -54,7 +54,7 @@ two spare desks; a full department is disabled in the dialog.
 │  Main process (Node)                                                      │
 │   ├─ RepoService      shallow clone/pull into repos/<owner>__<name>      │
 │   ├─ AgentRunner      spawn `claude -p` per figure, stream stdout as IPC   │
-│   ├─ StateStore       figures.json, sprints.json, world.json              │
+│   ├─ StateStore       state.json in userData, temp-file writes, .bak     │
 │   └─ IPC bridge       typed channels, exposed via preload contextBridge   │
 │                                                                           │
 │  Renderer (React + Phaser)                                                │
@@ -208,14 +208,16 @@ interface Floor { id: string; name: string; source: FloorSource; repoStatus: Rep
 | Planning run hangs | No time cap beyond the 10 minute run timeout; Stop in the agent panel ends the meeting |
 | Start sprint with no repo / no claude | Button disabled with "Needs Claude Code and a repository on this floor."; a second sprint cannot start while one is planning or active |
 | Concurrency cap hit | Run shows "queued"; the figure looks like a working one (typing, dots) until its turn |
-| Corrupt JSON state | Backup file renamed `.bak`, fresh defaults loaded, warning shown |
+| Corrupt JSON state | `state.json` moved to `state.json.bak`, fresh defaults loaded, a dismissable notice names the backup |
+| Saved repo folder gone | The floor is restored; its repo status shows the error and the path is cleared, so runs cannot start until it is fixed |
 
 ## 9. Testing
 
 - Main process: unit tests with Vitest for RepoService (injected git runner), the real git
   runner against `git --version`, the repo controller (DTO, error mapping, registration),
   the URL parser, AgentRunner, StateStore.
-- Renderer: Vitest + Testing Library for the figures store, the Add figure dialog and modal, the Load repo dialog, the repo status chip, HUD (routing, replies through the event bridge, failed starts), DialogBox (typewriter, floor switch, focus), AgentPanel; pure unit tests for the pixel art (figure, typing and walk frames, badges), the bubble text, `routeTask`, the tasks store and the reply text, the sprints store, `parsePlan` and the planning prompt, the walkable grid and paths, `FigureWalker` with a fake scene, the experience curve, `rewardRun` (XP, damage, level-up event and message), the sound stings against a fake AudioContext, `useSprints` (plan, hold during meeting, empty plan, cancelled meeting, failed start) and `SprintBoard`. Main: the agent service's priority queue. Shared test helpers live in `src/renderer/src/test/`.
+- Persistence: `src/shared/persistence.ts` (`Snapshot` v1, `parseSnapshot` shape check, `settleSnapshot`), main `StateStore` (load / save through a temp file, corrupt → `.bak` + warning) behind `state:load` / `state:save`, renderer `useHydration` (settle, hydrate stores, adopt every floor's repo again) and `usePersistence` (every store change → one save 500 ms later, flushed on unload).
+- Renderer: Vitest + Testing Library for the figures store, the Add figure dialog and modal, the Load repo dialog, the repo status chip, HUD (routing, replies through the event bridge, failed starts), DialogBox (typewriter, floor switch, focus), AgentPanel; pure unit tests for the pixel art (figure, typing and walk frames, badges), the bubble text, `routeTask`, the tasks store and the reply text, the sprints store, `parsePlan` and the planning prompt, the walkable grid and paths, `FigureWalker` with a fake scene, the experience curve, `rewardRun` (XP, damage, level-up event and message), the sound stings against a fake AudioContext, the snapshot parser and settle, the state store on a temp folder, the state controller, hydration and debounced persistence, `useSprints` (plan, hold during meeting, empty plan, cancelled meeting, failed start) and `SprintBoard`. Main: the agent service's priority queue. Shared test helpers live in `src/renderer/src/test/`.
 - Phaser scene: smoke test that the scene boots headless and spawns N figures (pending; today Phaser is mocked in unit tests).
 - Manual: paste a repo, watch intake run, give a task, see it move to done.
 
@@ -238,5 +240,5 @@ One task = one branch = one PR, in order.
 | 10 | NPC dialog + HUD chat | DialogBox on click with Give a task / Show your work; HUD chat routes asks by mention or keywords; quests and replies |
 | 11 | Movement + sprints | Figures wander their room; sprint = planning meeting → quest per figure → board, progress, confetti |
 | 12 | XP + juice | XP per run, level curve, floating numbers, level-up burst, synthesized stings with mute |
-| 13 | Persistence | Figures, tasks, sprints, world survive restart |
+| 13 | Persistence | One snapshot (floors, figures, quests, chat, sprints, intake ids, settings) saved debounced and on close, restored settled on start |
 | 14 | Polish + README | Screenshots, GIF, packaging with electron-builder |

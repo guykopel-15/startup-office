@@ -4,6 +4,7 @@
 
 | Version | Date | Changes |
 |---|---|---|
+| 1.0.13 | 2026-09-15 | **Added:** persistence: floors and their figures (looks, role prompts, XP, levels), quests, chat, sprints, which floors already read their repo, and the mute setting are saved to `state.json` in the app's data folder (written through a temp file, half a second after the last change, and on close) and restored on the next start; each floor's repository is adopted again on start; a corrupt file is moved to `state.json.bak` and a dismissable notice says so; `DSNotice`. **Changed:** after a restart every figure starts idle, open quests count as failed and open sprints are closed, since their `claude` sessions are gone |
 | 1.0.12 | 2026-09-15 | **Added:** XP and levels: every finished run pays 50 XP ("+50 XP" floats up in green), a failed quest hits for 10 (red "-10", the figure flashes and shakes), levels follow a curve (level 2 at 100 XP, 3 at 300, 4 at 600…) and a level-up bursts gold sparks with "LEVEL UP!", posts "Level up! I am level N now." in the chat and puts "LvN" in the name tag; the dialog box shows level and XP progress; chiptune stings synthesized on Web Audio (level-up arpeggio, failure thud, cheer on a closed sprint) with a mute button in the navbar; `settingsStore`; level-up capture script. **Changed:** a level, once reached, is never lost even when XP drops |
 | 1.0.11 | 2026-09-15 | **Added:** movement: figures that are not working get up now and then, walk to a spot in their own room and come back (two-frame walk at 4.5 tiles/s, tile pathfinding around desks and through the doors); sprints: **Start sprint** in the HUD takes a goal, calls the whole team to the meeting room, the product manager's `claude` session splits the goal into one task per teammate (JSON plan, read-only look at the repo), every part becomes a quest, each figure says its part at the table, the planner announces "Here's the plan: N tasks", and everyone walks back to work; sprint board with goal, status, progress bar and the quests, and a New sprint button once it closed; the sprint closes when every quest ends, with confetti and a summary in the chat; the first figure plans when there is no product manager; `sprintsStore`; `figure:says` and `sprint:closed` events from React to the office; sprint capture scripts; runs can carry `isPriority` so the planning session jumps the floor's queue (priority runs keep their own order). **Changed:** a figure's `meeting` state sends it to the meeting table and holds while the plan is being made (run events are held back, then everyone settles into what their runs left them with); a figure's chat reply lands before its quest status flips, so the sprint summary comes last; `giveTask` returns the quest and has a per-floor variant; closing a floor tab also clears its sprints. **Fixed:** the office refits when the HUD grows or the window narrows (the camera remembers its fit zoom, the canvas host can shrink); removing a figure no longer throws; door walls block on both sides of the gap (the Operations kitchen moved to the corners so its door stays reachable); planning runs stay out of speech bubbles |
 | 1.0.10 | 2026-09-15 | **Changed:** review fixes for the dialog box and HUD chat: a quest's run id is attached inside the start mutation so two quick asks never lose a reply; the greeting is frozen when the box opens (no restart while the run streams); the box closes on a floor switch, on Escape, focuses its first choice and hands focus back; @mentions accept punctuation, multi-word and non-Latin names, unknown mentions stay in the text; Enter ignores IME composition; chat history capped per floor; HUD height capped so the office never collapses; shared text helpers, `findFigure`, close icon and success/danger color tokens; shared test helpers and more tests. **Fixed:** README safety section says runs are read-only; spec model and error table brought up to date |
@@ -109,6 +110,11 @@ its desk typing, and a speech bubble above it shows the agent's latest line.
    every sound.
 
    ![Level up](docs/images/level-up.png)
+8. **Come back tomorrow.** Everything is saved as you go: floors, figures with their levels,
+   quests, chat, sprints and the mute setting. The next start restores the office as it was, with
+   every figure back at its desk; a repository folder that moved shows its error in the chip.
+
+   ![Restored office](docs/images/restored-office.png)
    Closing a sprint throws confetti.
 
 ## The game layer
@@ -152,7 +158,7 @@ Other scripts: `npm test`, `npm run typecheck`, `npm run build`, `npm run icon` 
 when launching to capture the window to a file and quit, which is how the README images are made.
 `STARTUP_OFFICE_WINDOW=300x600` opens the window at a given size, for checking small layouts.
 `STARTUP_OFFICE_SCRIPT=<file>` (together with `STARTUP_OFFICE_SCREENSHOT`) runs a script in the page
-before the capture, to open dialogs or fill forms; `npm run screenshot-scripts` writes the eleven page scripts used
+before the capture, to open dialogs or fill forms. Saved state lives in `~/Library/Application Support/startup-office/state.json` (delete it to start fresh); `npm run screenshot-scripts` writes the eleven page scripts used
 for the README images into `scripts/screenshots/generated/` (`floorsReady.js` clones this repo; `figureStates.js` runs real `claude` sessions on a local folder and waits 45 s, or `--hold-ms=<n>`, for the badges and bubbles; `dialogBox.js` opens the box through the dev-only `window.startupOfficeDev.clickFigure` hook; `hudChat.js` types into the chat and waits for the reply; `sprintMeeting.js` and `sprintBoard.js` start a sprint and capture the meeting and, later, the plan; `levelUp.js` asks one figure something and captures the burst when it finishes). All three variables are ignored in packaged builds. The app works down to a 300px wide window:
 
 ![The office in a 300px window](docs/images/office-300px.png)
@@ -176,7 +182,7 @@ One task = one branch = one pull request, built in order.
 | 10 | NPC dialog + HUD chat | Dialog box on click with Give a task / Show your work; HUD chat routes an ask by @mention or keywords; quests and replies | ✅ |
 | 11 | Movement + sprints | Figures wander their room; Start sprint → planning meeting → one quest per figure → board, progress, confetti | ✅ |
 | 12 | XP + juice | XP per run, levels, level-up burst, damage numbers, synthesized stings with mute | ✅ |
-| 13 | Persistence | Figures, tasks, sprints, world survive restart | ☐ |
+| 13 | Persistence | Floors, figures, quests, chat, sprints and settings survive a restart | ✅ |
 | 14 | Polish | Screenshots, GIF, packaged `.dmg` | ☐ |
 
 Full design: [docs/superpowers/specs/2026-09-14-startup-office-design.md](docs/superpowers/specs/2026-09-14-startup-office-design.md)
