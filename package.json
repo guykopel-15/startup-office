@@ -1,6 +1,6 @@
 {
   "name": "startup-office",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "MapleStory-style desktop game where every employee is a real Claude Code agent",
   "directories": {
     "doc": "docs"

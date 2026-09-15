@@ -4,7 +4,10 @@ import { app, BrowserWindow, shell } from 'electron';
 
 import { createLogger } from '../shared/logger';
 import { readConfig } from './config';
+import { registerAgentController } from './ipc/agentController';
 import { registerRepoController } from './ipc/repoController';
+import { AgentService } from './services/agentService';
+import { killRunningClaude } from './services/claudeRunner';
 import { killRunningGit } from './services/gitRunner';
 import { RepoService } from './services/repoService';
 import { captureWindowToFile } from './services/screenshotService';
@@ -74,6 +77,7 @@ async function handleScreenshotRequest(mainWindow: BrowserWindow, outputPath: st
 void app.whenReady().then(() => {
   logger.info('app ready');
   registerRepoController(new RepoService(app.getPath('userData')));
+  registerAgentController(new AgentService(config.claudeBinary, config.pathVariable));
   if (config.isDarwin && !app.isPackaged) app.dock?.setIcon(APP_ICON_PATH);
   const mainWindow = createWindow();
   app.on('activate', handleActivate);
@@ -86,3 +90,4 @@ void app.whenReady().then(() => {
 
 app.on('window-all-closed', handleAllWindowsClosed);
 app.on('before-quit', killRunningGit);
+app.on('before-quit', killRunningClaude);

@@ -8,7 +8,7 @@ import { useFloorsStore } from '../store/floorsStore';
 import type React from 'react';
 
 function renderNavbar(onAddFigure: () => void = vi.fn()): void {
-  render(<Navbar onAddFigure={onAddFigure} />);
+  render(<Navbar onAddFigure={onAddFigure} onOpenFigure={vi.fn()} />);
 }
 
 describe('Navbar', () => {

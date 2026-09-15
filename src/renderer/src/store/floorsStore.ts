@@ -7,7 +7,7 @@ import { createFigure } from './seating';
 
 import type { StoreApi } from 'zustand';
 
-import type { Figure } from '@shared/figures';
+import type { Figure, FigureState } from '@shared/figures';
 import type { Floor, FloorSetupProgress, FloorSource } from '@shared/floors';
 import type { RepoStatus } from '@shared/repo';
 import type { NewFigureInput } from './seating';
@@ -30,6 +30,8 @@ export interface FloorsState {
   appendFigure: (floorId: string, figure: Figure) => void;
   /** Seats a new figure on the active floor; null when there is no floor, the text is invalid or the room is full. */
   addFigure: (input: NewFigureInput) => Figure | null;
+  setFigureState: (floorId: string, figureId: string, state: FigureState) => void;
+  setRolePrompt: (floorId: string, figureId: string, rolePrompt: string) => void;
 }
 
 export const INITIAL_SETUP: FloorSetupProgress = { step: FloorSetupStep.PreparingRepo, fraction: 0, label: 'Preparing the repository', error: null };
@@ -41,6 +43,10 @@ function nextFloorId(): string {
 
 function patchFloor(floors: readonly Floor[], floorId: string, patch: (floor: Floor) => Floor): Floor[] {
   return floors.map((floor: Floor): Floor => (floor.id === floorId ? patch(floor) : floor));
+}
+
+function patchFigure(floors: readonly Floor[], floorId: string, figureId: string, patch: (figure: Figure) => Figure): Floor[] {
+  return patchFloor(floors, floorId, (floor: Floor): Floor => ({ ...floor, figures: floor.figures.map((figure: Figure): Figure => (figure.id === figureId ? patch(figure) : figure)) }));
 }
 
 /** The floor whose office is on screen, or null when there are no floors yet. */
@@ -86,5 +92,11 @@ export const useFloorsStore = create<FloorsState>((set: StoreApi<FloorsState>['s
     if (figure === null) return null;
     get().appendFigure(active.id, figure);
     return figure;
+  },
+  setFigureState: (floorId: string, figureId: string, state: FigureState): void => {
+    set({ floors: patchFigure(get().floors, floorId, figureId, (figure: Figure): Figure => ({ ...figure, state })) });
+  },
+  setRolePrompt: (floorId: string, figureId: string, rolePrompt: string): void => {
+    set({ floors: patchFigure(get().floors, floorId, figureId, (figure: Figure): Figure => ({ ...figure, rolePrompt })) });
   },
 }));
