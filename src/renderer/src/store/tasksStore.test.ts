@@ -36,8 +36,8 @@ describe('tasksStore', (): void => {
   });
 
   it('caps messages per floor without touching other floors', (): void => {
-    useTasksStore.getState().addMessage({ floorId: 'other', authorId: 'ceo', text: 'keep me' });
-    for (let index = 0; index <= MAX_MESSAGES_PER_FLOOR; index += 1) useTasksStore.getState().addMessage({ floorId: 'f1', authorId: 'ceo', text: `m${index}` });
+    useTasksStore.getState().addMessage({ floorId: 'other', authorId: CEO_AUTHOR_ID, text: 'keep me' });
+    for (let index = 0; index <= MAX_MESSAGES_PER_FLOOR; index += 1) useTasksStore.getState().addMessage({ floorId: 'f1', authorId: CEO_AUTHOR_ID, text: `m${index}` });
     expect(selectMessagesForFloor(useTasksStore.getState(), 'f1')).toHaveLength(MAX_MESSAGES_PER_FLOOR);
     expect(selectMessagesForFloor(useTasksStore.getState(), 'f1')[0]?.text).toBe('m1');
     expect(selectMessagesForFloor(useTasksStore.getState(), 'other')).toHaveLength(1);

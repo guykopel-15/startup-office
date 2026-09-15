@@ -25,6 +25,11 @@ describe('sprints', (): void => {
     ]);
   });
 
+  it('ignores prose with brackets after the plan and brackets inside titles', (): void => {
+    const result = '[{"figureId":"frontend","title":"Fix app/[slug]/page.tsx"}]\n\n[note: the backend is fine]';
+    expect(parsePlan(result, FIGURES)).toEqual([{ figureId: 'frontend', title: 'Fix app/[slug]/page.tsx' }]);
+  });
+
   it('falls back to "id: task" lines and accepts names', (): void => {
     const result = 'Plan:\n- backend: Add the theme endpoint\n* Dan – Write theme tests\nnothing here';
     expect(parsePlan(result, FIGURES)).toEqual([

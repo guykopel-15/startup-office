@@ -35,6 +35,19 @@ describe('SprintBoard', (): void => {
     expect(screen.getByText('Test both themes')).toBeInTheDocument();
   });
 
+  it('keeps the form open when the start is refused and closes it on Cancel', async (): Promise<void> => {
+    const user = userEvent.setup();
+    const onStart = vi.fn().mockReturnValue(false);
+    render(<SprintBoard sprint={null} tasks={[]} figures={FIGURES} canStart onStart={onStart} />);
+    await user.click(screen.getByRole('button', { name: 'Start sprint' }));
+    await user.type(screen.getByLabelText('Sprint goal'), 'Ship it{Enter}');
+    expect(onStart).toHaveBeenCalledWith('Ship it');
+    expect(screen.getByLabelText('Sprint goal')).toHaveValue('Ship it');
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByLabelText('Sprint goal')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Start sprint' })).toBeInTheDocument();
+  });
+
   it('offers a new sprint once the last one closed and explains when it cannot start', (): void => {
     render(<SprintBoard sprint={{ ...SPRINT, status: SprintStatus.Closed }} tasks={TASKS} figures={FIGURES} canStart={false} onStart={vi.fn()} />);
     const button = screen.getByRole('button', { name: 'New sprint' });

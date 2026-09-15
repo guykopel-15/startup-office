@@ -10,8 +10,6 @@ export const BUBBLE_MAX_LENGTH = 56;
 const STOPPED_TEXT = 'Stopped.';
 const FAILED_PREFIX = 'Hmm, ';
 const FAILED_FALLBACK = 'something went wrong.';
-/** A result that is data for the app (a sprint plan), not something a figure would say out loud. */
-const DATA_OPENERS: readonly string[] = ['[', '{'];
 const CODE_FENCE = '```';
 
 /** "/Users/me/repo/src/index.ts" reads as "index.ts"; words without a slash are untouched. */
@@ -29,14 +27,15 @@ export function bubbleTextForLine(line: string): string {
   return truncate(words.join(WORD_SEPARATOR).replace(WHITESPACE, WORD_SEPARATOR).trim(), BUBBLE_MAX_LENGTH);
 }
 
+/** Code fence lines are skipped: "```json" is not something to say. */
 function firstNonEmptyLine(text: string): string {
-  const line =
+  return (
     text
       .split(LINE_SEPARATOR)
       .filter((candidate: string): boolean => !candidate.trim().startsWith(CODE_FENCE))
       .map(cleanLine)
-      .find((candidate: string): boolean => candidate !== '') ?? '';
-  return DATA_OPENERS.some((opener: string): boolean => line.startsWith(opener)) ? '' : line;
+      .find((candidate: string): boolean => candidate !== '') ?? ''
+  );
 }
 
 function lastNonEmptyLine(lines: readonly string[]): string {

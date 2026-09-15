@@ -2,8 +2,8 @@ import { useEffect } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 
 import { RunStatus } from '@shared/agents';
-import { SprintStatus } from '@shared/sprints';
 import { FigureState } from '@shared/figures';
+import { SprintStatus } from '@shared/sprints';
 import { unwrapResponse } from '@shared/response';
 import { useFloorsStore } from '../store/floorsStore';
 import { useRunsStore } from '../store/runsStore';

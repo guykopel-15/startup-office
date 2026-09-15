@@ -4,7 +4,7 @@
 
 | Version | Date | Changes |
 |---|---|---|
-| 1.0.11 | 2026-09-15 | **Added:** movement: idle figures get up now and then, walk to a spot in their own room and come back (walk frames, tile pathfinding around desks and through the doors); sprints: **Start sprint** in the HUD takes a goal, calls the whole team to the meeting room, the product manager's `claude` session splits the goal into one task per teammate (JSON plan, read-only look at the repo), every part becomes a quest, each figure says its part at the table and walks back to work; sprint board with goal, status, progress bar and the quests; the sprint closes when every quest ends, with confetti and a summary in the chat; `sprintsStore`; sprint capture scripts; runs can carry `isPriority` so the planning session jumps the floor's queue. **Changed:** a figure's `meeting` state sends it to the meeting table and holds while the plan is being made (run events do not pull a figure out of the meeting); walk speed 4.5 tiles/s; closing a floor tab also clears its sprints. **Fixed:** the office refits when the HUD grows (chat history, sprint board), not only on window resize |
+| 1.0.11 | 2026-09-15 | **Added:** movement: figures that are not working get up now and then, walk to a spot in their own room and come back (two-frame walk at 4.5 tiles/s, tile pathfinding around desks and through the doors); sprints: **Start sprint** in the HUD takes a goal, calls the whole team to the meeting room, the product manager's `claude` session splits the goal into one task per teammate (JSON plan, read-only look at the repo), every part becomes a quest, each figure says its part at the table, the planner announces "Here's the plan: N tasks", and everyone walks back to work; sprint board with goal, status, progress bar and the quests, and a New sprint button once it closed; the sprint closes when every quest ends, with confetti and a summary in the chat; the first figure plans when there is no product manager; `sprintsStore`; `figure:says` and `sprint:closed` events from React to the office; sprint capture scripts; runs can carry `isPriority` so the planning session jumps the floor's queue (priority runs keep their own order). **Changed:** a figure's `meeting` state sends it to the meeting table and holds while the plan is being made (run events are held back, then everyone settles into what their runs left them with); a figure's chat reply lands before its quest status flips, so the sprint summary comes last; `giveTask` returns the quest and has a per-floor variant; closing a floor tab also clears its sprints. **Fixed:** the office refits when the HUD grows or the window narrows (the camera remembers its fit zoom, the canvas host can shrink); removing a figure no longer throws; door walls block on both sides of the gap (the Operations kitchen moved to the corners so its door stays reachable); planning runs stay out of speech bubbles |
 | 1.0.10 | 2026-09-15 | **Changed:** review fixes for the dialog box and HUD chat: a quest's run id is attached inside the start mutation so two quick asks never lose a reply; the greeting is frozen when the box opens (no restart while the run streams); the box closes on a floor switch, on Escape, focuses its first choice and hands focus back; @mentions accept punctuation, multi-word and non-Latin names, unknown mentions stay in the text; Enter ignores IME composition; chat history capped per floor; HUD height capped so the office never collapses; shared text helpers, `findFigure`, close icon and success/danger color tokens; shared test helpers and more tests. **Fixed:** README safety section says runs are read-only; spec model and error table brought up to date |
 | 1.0.9 | 2026-09-15 | **Added:** NPC dialog box: clicking a figure opens a MapleStory-style box with its portrait, a typed greeting (hello, what it is doing right now, or its last result) and the choices Give a task / Show your work / Bye; HUD bar under the office with quest counts (active, done, failed), the chat history and a chat box: an ask goes to the figure you @mention, else to the one whose job or keywords match (tests → QA, api → backend, budget → accountant…), else to the product manager; every ask becomes a quest and the figure's reply lands in the chat when its run ends; tasks store; `startupOfficeDev.clickFigure` dev hook for captures. **Changed:** figure clicks open the dialog box instead of the agent panel (the panel opens from Show your work or the Agents button); `DSInput` can carry its own aria-label; closing a floor tab now clears its runs, quests and chat; every run, tasks included, is read-only for now (Read, Grep, Glob) |
 | 1.0.8 | 2026-09-15 | **Added:** figure states in the office: a typing animation (arms on the keyboard) while a figure works, a badge above the name tag (animated dots while working, green tick when done, red cross on error) and a MapleStory-style speech bubble that shows the figure's latest output line, tool note, first result line, error, or "Stopped." when you stop it, so on load you watch the whole team read the repo. **Changed:** the scene now diffs figure state and run output from the stores instead of only seating and removing figures |
@@ -45,7 +45,7 @@ colors, so adding a new employee is a data change, not new art.
 | Sales | Sales rep, Customer success |
 | Finance | Accountant, Fundraising lead |
 | Ops / HR | Office manager, Recruiter |
-| Meeting room | The sprint board. Figures walk here for sprint planning |
+| Meeting room | Where the team meets for sprint planning; the board is in the HUD |
 | Lobby | The corridor every room opens onto |
 
 Every figure is an agent. Behind it runs a real `claude` CLI session with a role
@@ -102,7 +102,7 @@ its desk typing, and a speech bubble above it shows the agent's latest line.
    prompt (it defaults from the job), and they sit down.
 
    ![Add figure dialog](docs/images/add-figure-dialog.png)
-7. **Level up.** Figures gain XP for finished tasks. Failed tasks show damage numbers.
+7. **Level up** (task 12, not built yet). Figures will gain XP for finished tasks; failed tasks will show damage numbers.
    Closing a sprint throws confetti.
 
 ## The game layer
@@ -110,11 +110,11 @@ its desk typing, and a speech bubble above it shows the agent's latest line.
 | Element | What you get |
 |---|---|
 | World | Isometric floor plan: seven rooms around a lobby corridor, opaque walls with windows and decor, per-room floors and furniture |
-| Characters | Idle bounce, desk typing animation, 4-direction walk cycles (task 11) |
+| Characters | Idle bounce, desk typing, two-frame walk cycle facing left or right, wandering and meetings |
 | Floors | Side panel with one tab per repository; each floor has its own team |
-| HUD | Bottom bar: quest counts, chat history and the chat box that routes asks to figures |
+| HUD | Bottom bar: quest counts, sprint board (goal, status, progress, quests), chat history and the chat box that routes asks to figures |
 | Dialog | MapleStory-style NPC dialog box for every figure: portrait, typed greeting, Give a task / Show your work / Bye |
-| Juice | Level-up burst, damage numbers, confetti, chiptune per room, keyboard clatter |
+| Juice | Confetti on a closed sprint; level-up burst, damage numbers, chiptune per room and keyboard clatter arrive with task 12 |
 
 ## Stack
 
@@ -123,7 +123,7 @@ its desk typing, and a speech bubble above it shows the agent's latest line.
 | Shell | Electron |
 | UI | React, TypeScript, Vite, Zustand, TanStack Query |
 | Game | Phaser 3 |
-| Agents | `claude` CLI (`claude -p --output-format stream-json`), read-only tools for intake, three sessions at a time |
+| Agents | `claude` CLI (`claude -p --output-format stream-json`), read-only tools for every run today, three sessions at a time |
 | Storage | JSON files and cloned repositories in the Electron user data folder |
 | Tests | Vitest, Testing Library |
 

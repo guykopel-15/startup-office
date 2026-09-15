@@ -1,10 +1,10 @@
 import { create } from 'zustand';
 
+import { nextId } from '@shared/ids';
 import { SprintStatus } from '@shared/sprints';
 import { TaskStatus } from '@shared/tasks';
 
 import type { StoreApi } from 'zustand';
-
 import type { Sprint } from '@shared/sprints';
 import type { Task } from '@shared/tasks';
 
@@ -46,7 +46,7 @@ export function selectSprintForFloor(state: { sprints: readonly Sprint[] }, floo
 }
 
 export function selectSprintTasks(sprint: Sprint, tasks: readonly Task[]): Task[] {
-  return sprint.taskIds.map((taskId: string): Task | undefined => tasks.find((task: Task): boolean => task.id === taskId)).filter((task): task is Task => task !== undefined);
+  return sprint.taskIds.map((taskId: string): Task | undefined => tasks.find((task: Task): boolean => task.id === taskId)).filter((task: Task | undefined): task is Task => task !== undefined);
 }
 
 export function sprintProgress(sprint: Sprint, tasks: readonly Task[]): SprintProgress {
@@ -65,7 +65,7 @@ export function isSprintFinished(sprint: Sprint, tasks: readonly Task[]): boolea
 export const useSprintsStore = create<SprintsState>((set: StoreApi<SprintsState>['setState'], get: StoreApi<SprintsState>['getState']): SprintsState => ({
   sprints: [],
   startSprint: (input: NewSprintInput): Sprint => {
-    const sprint: Sprint = { id: `${SPRINT_ID_PREFIX}${crypto.randomUUID()}`, floorId: input.floorId, goal: input.goal.trim(), status: SprintStatus.Planning, planRunId: null, taskIds: [], createdAt: new Date().toISOString(), closedAt: null };
+    const sprint: Sprint = { id: nextId(SPRINT_ID_PREFIX), floorId: input.floorId, goal: input.goal.trim(), status: SprintStatus.Planning, planRunId: null, taskIds: [], createdAt: new Date().toISOString(), closedAt: null };
     set({ sprints: [...get().sprints, sprint] });
     return sprint;
   },

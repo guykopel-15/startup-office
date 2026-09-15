@@ -5,6 +5,7 @@ import { TaskStatus } from '@shared/tasks';
 import { isBlank } from '@shared/text';
 import { DSButton, DSButtonVariant, DSInput, DSProgressBar, submitOnEnter } from '../designKit';
 import { selectSprintTasks, sprintProgress } from '../store/sprintsStore';
+import { CANNOT_START_HINT } from './useGiveTask';
 
 import type React from 'react';
 import type { Figure } from '@shared/figures';
@@ -19,10 +20,25 @@ interface SprintBoardProps {
   onStart: (goal: string) => boolean;
 }
 
+interface GoalFormProps {
+  onStart: (goal: string) => boolean;
+  onCancel: () => void;
+}
+
+interface TaskRowProps {
+  task: Task;
+  figures: readonly Figure[];
+}
+
+interface SprintSummaryProps {
+  sprint: Sprint;
+  tasks: readonly Task[];
+  figures: readonly Figure[];
+}
+
 const BOARD_LABEL = 'Sprint board';
 const START_LABEL = 'Start sprint';
 const START_ICON = '⚑';
-const START_HINT = 'Needs Claude Code and a repository on this floor.';
 const NEW_SPRINT_LABEL = 'New sprint';
 const GOAL_FIELD_ID = 'sprint-goal';
 const GOAL_LABEL = 'Sprint goal';
@@ -31,19 +47,22 @@ const GO_LABEL = 'Go';
 const CANCEL_LABEL = 'Cancel';
 const PROGRESS_SEPARATOR = ' / ';
 const PROGRESS_SUFFIX = ' tasks';
+const TASK_CLASS = 'sprint-board__task';
+const STATUS_CLASS = 'sprint-board__status';
+const MODIFIER_SEPARATOR = '--';
 const STATUS_LABELS: Readonly<Record<SprintStatus, string>> = { [SprintStatus.Planning]: 'Planning in the meeting room…', [SprintStatus.Active]: 'In progress', [SprintStatus.Closed]: 'Closed' };
 const TASK_ICONS: Readonly<Record<TaskStatus, string>> = { [TaskStatus.Backlog]: '○', [TaskStatus.Active]: '⚔', [TaskStatus.Review]: '◔', [TaskStatus.Done]: '✔', [TaskStatus.Failed]: '✖' };
 const UNKNOWN_ASSIGNEE = 'Someone';
 
-function GoalForm({ onStart, onCancel }: { onStart: (goal: string) => boolean; onCancel: () => void }): React.JSX.Element {
+function GoalForm({ onStart, onCancel }: GoalFormProps): React.JSX.Element {
   const [goal, setGoal] = useState('');
-  const submit = (): void => {
+  const handleSubmit = (): void => {
     if (!isBlank(goal) && onStart(goal)) setGoal('');
   };
   return (
     <div className="sprint-board__form">
-      <DSInput id={GOAL_FIELD_ID} value={goal} onChange={setGoal} placeholder={GOAL_PLACEHOLDER} maxLength={MAX_GOAL_LENGTH} onKeyDown={submitOnEnter(submit)} aria-label={GOAL_LABEL} shouldAutoFocus />
-      <DSButton onClick={submit} isDisabled={isBlank(goal)} variant={DSButtonVariant.Primary}>
+      <DSInput id={GOAL_FIELD_ID} value={goal} onChange={setGoal} placeholder={GOAL_PLACEHOLDER} maxLength={MAX_GOAL_LENGTH} onKeyDown={submitOnEnter(handleSubmit)} aria-label={GOAL_LABEL} shouldAutoFocus />
+      <DSButton onClick={handleSubmit} isDisabled={isBlank(goal)} variant={DSButtonVariant.Primary}>
         {GO_LABEL}
       </DSButton>
       <DSButton onClick={onCancel}>{CANCEL_LABEL}</DSButton>
@@ -51,10 +70,10 @@ function GoalForm({ onStart, onCancel }: { onStart: (goal: string) => boolean; o
   );
 }
 
-function TaskRow({ task, figures }: { task: Task; figures: readonly Figure[] }): React.JSX.Element {
+function TaskRow({ task, figures }: TaskRowProps): React.JSX.Element {
   const assignee = figures.find((figure: Figure): boolean => figure.id === task.assigneeId)?.name ?? UNKNOWN_ASSIGNEE;
   return (
-    <li className={`sprint-board__task sprint-board__task--${task.status}`} title={task.status}>
+    <li className={`${TASK_CLASS} ${TASK_CLASS}${MODIFIER_SEPARATOR}${task.status}`} title={task.status}>
       <span aria-hidden="true">{TASK_ICONS[task.status]}</span>
       <span className="sprint-board__assignee">{assignee}</span>
       <span className="sprint-board__title">{task.title}</span>
@@ -62,13 +81,13 @@ function TaskRow({ task, figures }: { task: Task; figures: readonly Figure[] }):
   );
 }
 
-function SprintSummary({ sprint, tasks, figures }: Pick<SprintBoardProps, 'sprint' | 'tasks' | 'figures'> & { sprint: Sprint }): React.JSX.Element {
+function SprintSummary({ sprint, tasks, figures }: SprintSummaryProps): React.JSX.Element {
   const progress = sprintProgress(sprint, tasks);
   return (
     <div className="sprint-board__summary">
       <div className="sprint-board__goal">
         <span className="sprint-board__goal-text">{sprint.goal}</span>
-        <span className={`sprint-board__status sprint-board__status--${sprint.status}`}>{STATUS_LABELS[sprint.status]}</span>
+        <span className={`${STATUS_CLASS} ${STATUS_CLASS}${MODIFIER_SEPARATOR}${sprint.status}`}>{STATUS_LABELS[sprint.status]}</span>
       </div>
       {progress.total > 0 && <DSProgressBar fraction={progress.fraction} label={`${progress.done + progress.failed}${PROGRESS_SEPARATOR}${progress.total}${PROGRESS_SUFFIX}`} />}
       <ol className="sprint-board__tasks">
@@ -87,12 +106,14 @@ export function SprintBoard({ sprint, tasks, figures, canStart, onStart }: Sprin
     if (isStarted) setIsEditing(false);
     return isStarted;
   };
+  const handleEdit = (): void => setIsEditing(true);
+  const handleCancel = (): void => setIsEditing(false);
   return (
     <section className="sprint-board" aria-label={BOARD_LABEL}>
       {sprint !== null && <SprintSummary sprint={sprint} tasks={tasks} figures={figures} />}
-      {isEditing && <GoalForm onStart={handleStart} onCancel={(): void => setIsEditing(false)} />}
+      {isEditing && <GoalForm onStart={handleStart} onCancel={handleCancel} />}
       {!isEditing && !isRunning && (
-        <DSButton onClick={(): void => setIsEditing(true)} isDisabled={!canStart} title={canStart ? undefined : START_HINT} icon={START_ICON} variant={DSButtonVariant.Primary}>
+        <DSButton onClick={handleEdit} isDisabled={!canStart} title={canStart ? undefined : CANNOT_START_HINT} icon={START_ICON} variant={DSButtonVariant.Primary}>
           {sprint === null ? START_LABEL : NEW_SPRINT_LABEL}
         </DSButton>
       )}

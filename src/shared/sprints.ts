@@ -1,5 +1,5 @@
 import { findFigure } from './figures';
-import { isBlank } from './text';
+import { LINE_SEPARATOR, isBlank } from './text';
 
 import type { Figure } from './figures';
 
@@ -35,7 +35,10 @@ export const MAX_PLANNED_TITLE_LENGTH = 140;
 export const PLANNER_ID = 'pm';
 /** Keeps the meeting short: the planner skims, it does not audit. */
 const MAX_PLANNING_TOOL_CALLS = 6;
-const JSON_ARRAY = /\[[\s\S]*\]/;
+const ARRAY_OPEN = '[';
+const ARRAY_CLOSE = ']';
+const STRING_QUOTE = '"';
+const ESCAPE = '\\';
 /** "- qa: write tests" or "Dan – write tests" style lines, the fallback when the model skips JSON. */
 const PLAN_LINE = /^\s*(?:[-*]\s*)?([^:–-]+?)\s*[:–-]\s*(.+?)\s*$/u;
 
@@ -61,7 +64,28 @@ export function buildPlanningPrompt(planner: Figure, goal: string, figures: read
     '- at most one task per teammate, only for teammates whose job is needed, at least two tasks',
     `- each title under ${MAX_PLANNED_TITLE_LENGTH} characters, names the files or areas involved`,
     'Reply with ONLY a JSON array, no prose: [{"figureId": "<id from the team list>", "title": "<task>"}]',
-  ].join('\n');
+  ].join(LINE_SEPARATOR);
+}
+
+/** The first complete JSON array in `text`, found by bracket depth (strings respected), so trailing prose with `]` cannot break it. */
+function extractJsonArray(text: string): string | null {
+  const start = text.indexOf(ARRAY_OPEN);
+  if (start === -1) return null;
+  let depth = 0;
+  let isInString = false;
+  for (let index = start; index < text.length; index += 1) {
+    const character = text[index];
+    if (isInString) {
+      if (character === ESCAPE) index += 1;
+      else if (character === STRING_QUOTE) isInString = false;
+    } else if (character === STRING_QUOTE) isInString = true;
+    else if (character === ARRAY_OPEN) depth += 1;
+    else if (character === ARRAY_CLOSE) {
+      depth -= 1;
+      if (depth === 0) return text.slice(start, index + 1);
+    }
+  }
+  return null;
 }
 
 function normalizeEntry(entry: unknown, figures: readonly Figure[]): PlannedTask | null {
@@ -72,12 +96,16 @@ function normalizeEntry(entry: unknown, figures: readonly Figure[]): PlannedTask
   return figure === null ? null : { figureId: figure.id, title: title.trim().slice(0, MAX_PLANNED_TITLE_LENGTH) };
 }
 
+function isPlannedTask(task: PlannedTask | null): task is PlannedTask {
+  return task !== null;
+}
+
 function parseJsonPlan(text: string, figures: readonly Figure[]): PlannedTask[] {
-  const match = JSON_ARRAY.exec(text);
-  if (match === null) return [];
+  const json = extractJsonArray(text);
+  if (json === null) return [];
   try {
-    const parsed: unknown = JSON.parse(match[0]);
-    return Array.isArray(parsed) ? parsed.map((entry: unknown): PlannedTask | null => normalizeEntry(entry, figures)).filter((task): task is PlannedTask => task !== null) : [];
+    const parsed: unknown = JSON.parse(json);
+    return Array.isArray(parsed) ? parsed.map((entry: unknown): PlannedTask | null => normalizeEntry(entry, figures)).filter(isPlannedTask) : [];
   } catch {
     return [];
   }
@@ -85,12 +113,12 @@ function parseJsonPlan(text: string, figures: readonly Figure[]): PlannedTask[] 
 
 function parseLinePlan(text: string, figures: readonly Figure[]): PlannedTask[] {
   return text
-    .split('\n')
+    .split(LINE_SEPARATOR)
     .map((line: string): PlannedTask | null => {
       const match = PLAN_LINE.exec(line);
       return match === null ? null : normalizeEntry({ figureId: match[1], title: match[2] }, figures);
     })
-    .filter((task): task is PlannedTask => task !== null);
+    .filter(isPlannedTask);
 }
 
 /** The plan out of a planning run's result: JSON first, "id: task" lines as a fallback, one task per figure. */

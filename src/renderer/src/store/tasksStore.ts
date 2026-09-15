@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 
 import { RunStatus } from '@shared/agents';
+import { nextId } from '@shared/ids';
 import { CEO_AUTHOR_ID, TaskStatus } from '@shared/tasks';
 import { replyTextForRun } from './replyText';
 
@@ -49,10 +50,6 @@ const TASK_STATUS_BY_RUN_STATUS: Readonly<Partial<Record<RunStatus, TaskStatus>>
   [RunStatus.Error]: TaskStatus.Failed,
   [RunStatus.Cancelled]: TaskStatus.Failed,
 };
-
-function nextId(prefix: string): string {
-  return `${prefix}${crypto.randomUUID()}`;
-}
 
 function patchTaskById(tasks: readonly Task[], taskId: string, patch: (task: Task) => Task): Task[] {
   return tasks.map((task: Task): Task => (task.id === taskId ? patch(task) : task));

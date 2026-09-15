@@ -15,6 +15,8 @@ export class OfficeCamera {
   private readonly bounds: ScreenBounds;
   private dragStart: ScreenPoint = { x: 0, y: 0 };
   private dragCenter: ScreenPoint = { x: 0, y: 0 };
+  /** The zoom of the last fit, so a resize can tell "still at fit" apart from "user zoomed". */
+  private fitZoom = 0;
 
   constructor(scene: Phaser.Scene, bounds: ScreenBounds) {
     this.scene = scene;
@@ -36,7 +38,8 @@ export class OfficeCamera {
 
   fit(): void {
     const camera = this.scene.cameras.main;
-    camera.setZoom(getFitZoom(this.viewport(), this.bounds));
+    this.fitZoom = getFitZoom(this.viewport(), this.bounds);
+    camera.setZoom(this.fitZoom);
     camera.centerOn((this.bounds.minX + this.bounds.maxX) / 2, (this.bounds.minY + this.bounds.maxY) / 2);
   }
 
@@ -44,8 +47,9 @@ export class OfficeCamera {
     return { width: this.scene.scale.width, height: this.scene.scale.height };
   }
 
+  /** Compared against the fit of the previous viewport: the new one differs by definition after a resize. */
   private isAtFitZoom(): boolean {
-    return Math.abs(this.scene.cameras.main.zoom - getFitZoom(this.viewport(), this.bounds)) < ZOOM_TOLERANCE;
+    return Math.abs(this.scene.cameras.main.zoom - this.fitZoom) < ZOOM_TOLERANCE;
   }
 
   /** Refit when the user had not zoomed; otherwise keep their view and only re-clamp it. */

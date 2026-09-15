@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 
 import { FloorSetupStep } from '@shared/floors';
+import { nextId } from '@shared/ids';
 import { IDLE_REPO_STATUS } from '@shared/repo';
 import { getFurniture } from '../game/world/furniture';
 import { createFigure } from './seating';
@@ -37,10 +38,6 @@ export interface FloorsState {
 export const INITIAL_SETUP: FloorSetupProgress = { step: FloorSetupStep.PreparingRepo, fraction: 0, label: 'Preparing the repository', error: null };
 const FLOOR_ID_PREFIX = 'floor-';
 
-function nextFloorId(): string {
-  return `${FLOOR_ID_PREFIX}${crypto.randomUUID()}`;
-}
-
 function patchFloor(floors: readonly Floor[], floorId: string, patch: (floor: Floor) => Floor): Floor[] {
   return floors.map((floor: Floor): Floor => (floor.id === floorId ? patch(floor) : floor));
 }
@@ -49,9 +46,14 @@ function patchFigure(floors: readonly Floor[], floorId: string, figureId: string
   return patchFloor(floors, floorId, (floor: Floor): Floor => ({ ...floor, figures: floor.figures.map((figure: Figure): Figure => (figure.id === figureId ? patch(figure) : figure)) }));
 }
 
+/** The floor with `floorId`, or null. */
+export function selectFloor(state: { floors: readonly Floor[] }, floorId: string | null): Floor | null {
+  return state.floors.find((floor: Floor): boolean => floor.id === floorId) ?? null;
+}
+
 /** The floor whose office is on screen, or null when there are no floors yet. */
 export function selectActiveFloor(state: FloorsState): Floor | null {
-  return state.floors.find((floor: Floor): boolean => floor.id === state.activeFloorId) ?? null;
+  return selectFloor(state, state.activeFloorId);
 }
 
 export const EMPTY_FIGURES: readonly Figure[] = [];
@@ -64,7 +66,7 @@ export const useFloorsStore = create<FloorsState>((set: StoreApi<FloorsState>['s
   floors: [],
   activeFloorId: null,
   createFloor: (input: NewFloorInput): Floor => {
-    const floor: Floor = { id: nextFloorId(), name: input.name, source: input.source, repoStatus: IDLE_REPO_STATUS, figures: [], setup: INITIAL_SETUP };
+    const floor: Floor = { id: nextId(FLOOR_ID_PREFIX), name: input.name, source: input.source, repoStatus: IDLE_REPO_STATUS, figures: [], setup: INITIAL_SETUP };
     set({ floors: [...get().floors, floor], activeFloorId: floor.id });
     return floor;
   },

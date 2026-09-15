@@ -127,17 +127,17 @@ export class FigureSprite {
     this.bubble.hide();
   }
 
-  /** Stops timers and tweens and removes every display object. */
+  /** Stops timers and tweens and removes every display object. Helpers go first: they still touch the sprite. */
   destroy(): void {
     this.bobTween?.remove();
     this.blinkTimer?.remove();
+    this.typing.destroy();
+    this.walker.destroy();
     this.sprite.removeAllListeners();
     this.sprite.destroy();
     this.tag.destroy();
     this.badge.destroy();
     this.bubble.destroy();
-    this.typing.destroy();
-    this.walker.destroy();
     [this.idleKey, this.blinkKey].forEach((key: string): void => void this.scene.textures.remove(key));
   }
 
@@ -176,7 +176,8 @@ export class FigureSprite {
     this.tag.setDepth(depth + TAG_DEPTH_BONUS);
     this.badge.displayObject.setDepth(depth + BADGE_DEPTH_BONUS);
     this.bubble.displayObject.setDepth(BUBBLE_DEPTH_BASE + depth);
-    [this.sprite, this.tag, this.badge.displayObject, this.bubble.displayObject].forEach((object): void => void object.setX(this.restX));
+    const attached: readonly Phaser.GameObjects.Components.Transform[] = [this.sprite, this.tag, this.badge.displayObject, this.bubble.displayObject];
+    attached.forEach((object: Phaser.GameObjects.Components.Transform): void => void object.setX(this.restX));
     this.placeBubble();
   }
 

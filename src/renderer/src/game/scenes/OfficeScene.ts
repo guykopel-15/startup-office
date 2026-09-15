@@ -19,9 +19,11 @@ import { PALETTE } from '../world/palette';
 import { EXTERIOR_WALL_HEIGHT } from '../world/walls';
 import { selectActiveFigures, useFloorsStore } from '../../store/floorsStore';
 import { selectLatestRunsByFigure, useRunsStore } from '../../store/runsStore';
+import { useSprintsStore } from '../../store/sprintsStore';
 
 import type { AgentRun } from '@shared/agents';
 import type { Figure } from '@shared/figures';
+import type { Sprint } from '@shared/sprints';
 import type { FigureSaysPayload, SprintClosedPayload } from '../events';
 import type { Furniture } from '../world/furniture';
 import type { ScreenBounds, ScreenPoint } from '../world/isoProjection';
@@ -104,12 +106,14 @@ export class OfficeScene extends Phaser.Scene {
     });
   }
 
-  /** Lets each figure say the latest line of its latest run, once per new line. */
+  /** Lets each figure say the latest line of its latest run, once per new line. Planning runs stay quiet: their output is the plan, and the planner speaks through `figure:says`. */
   private syncBubbles(runs: RunsState): void {
     if (this.shownFloorId === null) return;
     const latestRuns = selectLatestRunsByFigure(runs, this.shownFloorId);
+    const planRunIds = new Set(useSprintsStore.getState().sprints.map((sprint: Sprint): string | null => sprint.planRunId));
     this.figureSprites.forEach((sprite: FigureSprite, figureId: string): void => {
-      const text = nextBubbleText(this.lastBubbles.get(figureId), latestRuns.get(figureId) ?? null);
+      const run = latestRuns.get(figureId) ?? null;
+      const text = nextBubbleText(this.lastBubbles.get(figureId), run !== null && planRunIds.has(run.id) ? null : run);
       if (text === null) return;
       this.lastBubbles.set(figureId, text);
       sprite.say(text);

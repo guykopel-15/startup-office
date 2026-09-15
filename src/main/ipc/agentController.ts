@@ -10,7 +10,7 @@ import type { ApiResponse } from '../../shared/response';
 import type { AgentService } from '../services/agentService';
 import type { IpcRegistrar } from './repoController';
 
-const INVALID_START_DTO = 'Expected { floorId, figureId, cwd, prompt: string, mode: readOnly | edit }';
+const INVALID_START_DTO = 'Expected { floorId, figureId, cwd, prompt: string, mode: readOnly | edit, isPriority?: boolean }';
 const INVALID_RUN_DTO = 'Expected { runId: string }';
 const RUN_MODES: readonly string[] = Object.values(RunMode);
 
@@ -30,8 +30,9 @@ export function parseStartRunDto(payload: unknown): StartRunInput | null {
   const mode = stringField(record, 'mode');
   if (floorId === null || figureId === null || cwd === null || prompt === null || mode === null || !RUN_MODES.includes(mode)) return null;
   if (prompt.trim() === '') return null;
-  const isPriority = record['isPriority'] === true;
-  return { floorId, figureId, cwd, prompt, mode: mode as RunMode, isPriority };
+  const isPriority = record['isPriority'];
+  if (isPriority !== undefined && typeof isPriority !== 'boolean') return null;
+  return { floorId, figureId, cwd, prompt, mode: mode as RunMode, isPriority: isPriority === true };
 }
 
 export function parseRunIdDto(payload: unknown): string | null {

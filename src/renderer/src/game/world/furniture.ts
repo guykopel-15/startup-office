@@ -107,8 +107,9 @@ const LAYOUT: Readonly<Record<RoomKey, readonly LocalPiece[]>> = {
     desk(1.5, 4.5, { hasMug: true }),
     desk(7.5, 9.5),
     desk(7.5, 4.5),
-    box(FurnitureKind.KitchenCounter, 1.2, 0.9, 5.5, 1.5),
-    box(FurnitureKind.Fridge, 7.4, 0.9, 1.8, 1.6),
+    // Counter and fridge hug the corners so the door in the middle stays reachable from the desks.
+    box(FurnitureKind.KitchenCounter, 0.8, 0.9, 3.2, 1.5),
+    box(FurnitureKind.Fridge, 9.4, 0.9, 1.8, 1.6),
     box(FurnitureKind.RoundTable, 3.2, 10, 2.6, 2.6),
     stool(2.2, 12.8),
     stool(5.8, 12.8),

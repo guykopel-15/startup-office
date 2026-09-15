@@ -2,15 +2,21 @@ import { vi } from 'vitest';
 
 import { DEFAULT_FIGURES } from '@shared/figures';
 import { FloorSourceKind } from '@shared/floors';
+import { RepoState } from '@shared/repo';
 import { useFloorsStore } from '../store/floorsStore';
 import { useRunsStore } from '../store/runsStore';
+import { useSprintsStore } from '../store/sprintsStore';
 import { useTasksStore } from '../store/tasksStore';
 
 import type { AgentEvent } from '@shared/agents';
 import type { Figure } from '@shared/figures';
+import type { RepoStatus } from '@shared/repo';
+import type { ChatMessage } from '@shared/tasks';
 
 export const MOCK_RUN_ID = 'run-1';
 export const MOCK_REPO_PATH = '/tmp/x';
+const MOCK_REPO_NAME = 'x';
+const READY_REPO: RepoStatus = { state: RepoState.Ready, url: null, fullName: MOCK_REPO_NAME, path: MOCK_REPO_PATH, message: null };
 
 /** The bridge every renderer test gets: resolved calls, and the captured event listener to fire runs. */
 export interface OfficeMock {
@@ -38,8 +44,18 @@ export function seedReadyFloor(figures: readonly Figure[] = DEFAULT_FIGURES.slic
   useFloorsStore.setState({ floors: [], activeFloorId: null });
   useRunsStore.setState({ runs: [], intakeStartedFloorIds: [] });
   useTasksStore.setState({ tasks: [], messages: [] });
+  useSprintsStore.setState({ sprints: [] });
   const floor = useFloorsStore.getState().createFloor({ name: 'Test', source: { kind: FloorSourceKind.Local, path: MOCK_REPO_PATH } });
-  useFloorsStore.getState().setRepoStatus(floor.id, { state: 'ready', url: null, fullName: 'x', path: MOCK_REPO_PATH, message: null } as never);
+  useFloorsStore.getState().setRepoStatus(floor.id, READY_REPO);
   figures.forEach((figure: Figure): void => useFloorsStore.getState().appendFigure(floor.id, figure));
   return floor.id;
+}
+
+export function messageTexts(): string[] {
+  return useTasksStore.getState().messages.map((message: ChatMessage): string => message.text);
+}
+
+export function lastMessageText(): string | undefined {
+  const texts = messageTexts();
+  return texts[texts.length - 1];
 }

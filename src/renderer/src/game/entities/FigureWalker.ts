@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 
 import { WALK_FRAME_COUNT, buildFigurePalette, composeWalkRows } from '../art/composeFigure';
-import { createPixelTexture } from '../art/pixelArt';
+import { createPixelTexture, frameTextureKeys } from '../art/pixelArt';
 import { projectToScreen } from '../world/isoProjection';
 
 import type { FigureLook } from '@shared/figures';
@@ -12,6 +12,7 @@ const WALK_SPEED = 4.5;
 const WALK_FRAME_MS = 140;
 const WALK_KEY_SUFFIX = '-walk-';
 const MS_PER_SECOND = 1000;
+const MIN_SEGMENT_MS = 1;
 
 export interface WalkTarget {
   /** Called on every step with the current feet point, so the owner can move its display objects. */
@@ -35,7 +36,7 @@ export class FigureWalker {
     this.sprite = sprite;
     this.idleKey = idleKey;
     this.feet = feet;
-    this.keys = Array.from({ length: WALK_FRAME_COUNT }, (_: unknown, index: number): string => `${idleKey}${WALK_KEY_SUFFIX}${index}`);
+    this.keys = frameTextureKeys(idleKey, WALK_KEY_SUFFIX, WALK_FRAME_COUNT);
     const palette = buildFigurePalette(look);
     this.keys.forEach((key: string, index: number): void => createPixelTexture(scene, { key, rows: composeWalkRows(look, index) }, palette));
   }
@@ -61,16 +62,21 @@ export class FigureWalker {
 
   /** Stops mid-stride and puts the resting pose back. */
   stop(): void {
+    this.halt();
+    this.sprite.setTexture(this.idleKey);
+  }
+
+  /** Drops the tween, timer and textures. Safe after the sprite itself was destroyed: it never touches it. */
+  destroy(): void {
+    this.halt();
+    this.keys.forEach((key: string): void => void this.scene.textures.remove(key));
+  }
+
+  private halt(): void {
     this.tween?.remove();
     this.tween = null;
     this.frameTimer?.remove();
     this.frameTimer = null;
-    this.sprite.setTexture(this.idleKey);
-  }
-
-  destroy(): void {
-    this.stop();
-    this.keys.forEach((key: string): void => void this.scene.textures.remove(key));
   }
 
   private walkSegment(path: readonly GridPoint[], index: number, target: WalkTarget): void {
@@ -86,7 +92,7 @@ export class FigureWalker {
     this.tween = this.scene.tweens.addCounter({
       from: 0,
       to: 1,
-      duration: Math.max(1, (distance / WALK_SPEED) * MS_PER_SECOND),
+      duration: Math.max(MIN_SEGMENT_MS, (distance / WALK_SPEED) * MS_PER_SECOND),
       onUpdate: (tween: Phaser.Tweens.Tween): void => {
         const progress = tween.getValue() ?? 0;
         this.feet = { gx: from.gx + (to.gx - from.gx) * progress, gy: from.gy + (to.gy - from.gy) * progress };

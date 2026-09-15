@@ -21,9 +21,11 @@ interface Actor {
   sprite: FigureSprite;
   room: RoomKey;
   seat: GridPoint;
-  state: FigureState;
+  state: FigureState | null;
   errand: Errand;
   dwellTimer: Phaser.Time.TimerEvent | null;
+  /** Index into the meeting spots while at (or heading to) the table. */
+  spotIndex: number | null;
 }
 
 const WANDER_TICK_MS = 5000;
@@ -31,6 +33,7 @@ const WANDER_TICK_MS = 5000;
 const WANDER_CHANCE = 0.6;
 const DWELL_MIN_MS = 2500;
 const DWELL_MAX_MS = 6000;
+const FREE_STATES: readonly FigureState[] = [FigureState.Idle, FigureState.Done, FigureState.Error];
 
 /**
  * Decides where figures go: idle ones stretch their legs inside their own room, a `meeting`
@@ -51,7 +54,7 @@ export class FigureDirector {
   }
 
   add(figureId: string, sprite: FigureSprite, room: RoomKey, seat: GridPoint, state: FigureState): void {
-    this.actors.set(figureId, { sprite, room, seat, state, errand: Errand.AtDesk, dwellTimer: null });
+    this.actors.set(figureId, { sprite, room, seat, state: null, errand: Errand.AtDesk, dwellTimer: null, spotIndex: null });
     this.setState(figureId, state);
   }
 
@@ -60,14 +63,14 @@ export class FigureDirector {
     this.actors.delete(figureId);
   }
 
-  /** Reacts to a state change: meetings send the figure to the table, anything else brings it home. */
+  /** Reacts to a state change: meetings send the figure to the table, anything else brings it home. Same state twice is a no-op. */
   setState(figureId: string, state: FigureState): void {
     const actor = this.actors.get(figureId);
-    if (actor === undefined) return;
+    if (actor === undefined || actor.state === state) return;
     actor.state = state;
     actor.sprite.setState(state);
     if (state === FigureState.Meeting) {
-      this.goToMeeting(figureId, actor);
+      this.goToMeeting(actor);
       return;
     }
     if (actor.errand !== Errand.AtDesk) this.goHome(actor);
@@ -80,23 +83,34 @@ export class FigureDirector {
     this.actors.clear();
   }
 
-  private goToMeeting(figureId: string, actor: Actor): void {
-    actor.dwellTimer?.remove();
-    actor.dwellTimer = null;
-    const index = Array.from(this.actors.keys()).indexOf(figureId);
-    const spot = this.spots[Math.min(index, this.spots.length - 1)];
+  /** The lowest meeting spot nobody holds; the last spot is shared once the table is full. */
+  private claimSpot(): number {
+    const taken = new Set(Array.from(this.actors.values()).map((actor: Actor): number | null => actor.spotIndex));
+    const free = this.spots.findIndex((_: GridPoint, index: number): boolean => !taken.has(index));
+    return free === -1 ? this.spots.length - 1 : free;
+  }
+
+  private goToMeeting(actor: Actor): void {
+    this.clearDwell(actor);
+    if (actor.spotIndex === null) actor.spotIndex = this.claimSpot();
+    const spot = this.spots[actor.spotIndex];
     if (spot === undefined) return;
     actor.errand = Errand.Meeting;
     this.walk(actor, spot, (): void => undefined);
   }
 
   private goHome(actor: Actor): void {
-    actor.dwellTimer?.remove();
-    actor.dwellTimer = null;
+    this.clearDwell(actor);
+    actor.spotIndex = null;
     actor.errand = Errand.Returning;
     this.walk(actor, actor.seat, (): void => {
       actor.errand = Errand.AtDesk;
     });
+  }
+
+  private clearDwell(actor: Actor): void {
+    actor.dwellTimer?.remove();
+    actor.dwellTimer = null;
   }
 
   /** Paths through the grid; an unreachable target just keeps the figure where it is. */
@@ -110,11 +124,12 @@ export class FigureDirector {
   }
 
   private handleWanderTick(): void {
-    if (Math.random() > WANDER_CHANCE) return;
+    if (Phaser.Math.FloatBetween(0, 1) > WANDER_CHANCE) return;
     const candidates = Array.from(this.actors.values()).filter(this.canWander);
     const actor = candidates[Phaser.Math.Between(0, candidates.length - 1)];
     if (actor === undefined) return;
-    const tiles = roomTiles(this.grid, actor.room);
+    const seats = Array.from(this.actors.values()).map((other: Actor): GridPoint => other.seat);
+    const tiles = roomTiles(this.grid, actor.room, seats);
     const tile = tiles[Phaser.Math.Between(0, tiles.length - 1)];
     if (tile === undefined) return;
     actor.errand = Errand.Wandering;
@@ -122,7 +137,7 @@ export class FigureDirector {
   }
 
   private readonly canWander = (actor: Actor): boolean => {
-    const isFree = actor.state === FigureState.Idle || actor.state === FigureState.Done || actor.state === FigureState.Error;
+    const isFree = actor.state !== null && FREE_STATES.includes(actor.state);
     return isFree && actor.errand === Errand.AtDesk && !actor.sprite.isWalking;
   };
 

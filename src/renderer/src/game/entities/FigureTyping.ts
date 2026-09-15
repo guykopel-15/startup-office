@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 
 import { TYPING_FRAME_COUNT, buildFigurePalette, composeTypingRows } from '../art/composeFigure';
-import { createPixelTexture } from '../art/pixelArt';
+import { createPixelTexture, frameTextureKeys } from '../art/pixelArt';
 
 import type { FigureLook } from '@shared/figures';
 
@@ -21,7 +21,7 @@ export class FigureTyping {
     this.scene = scene;
     this.sprite = sprite;
     this.idleKey = idleKey;
-    this.keys = Array.from({ length: TYPING_FRAME_COUNT }, (_: unknown, index: number): string => `${idleKey}${TYPING_KEY_SUFFIX}${index}`);
+    this.keys = frameTextureKeys(idleKey, TYPING_KEY_SUFFIX, TYPING_FRAME_COUNT);
     const palette = buildFigurePalette(look);
     this.keys.forEach((key: string, index: number): void => createPixelTexture(scene, { key, rows: composeTypingRows(look, index) }, palette));
   }

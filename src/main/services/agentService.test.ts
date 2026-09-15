@@ -120,9 +120,14 @@ describe('AgentService', () => {
     for (let index = 0; index < MAX_CONCURRENT_RUNS + 2; index += 1) ids.push(await service.start(INPUT));
     const priorityId = await service.start({ ...INPUT, isPriority: true });
     expect(running).toEqual(ids.slice(0, MAX_CONCURRENT_RUNS));
+    const secondPriorityId = await service.start({ ...INPUT, isPriority: true });
     control.release(0);
     await vi.waitFor((): void => expect(running).toHaveLength(MAX_CONCURRENT_RUNS + 1));
     expect(running[MAX_CONCURRENT_RUNS]).toBe(priorityId);
+    service.cancel(secondPriorityId);
+    control.release(1);
+    await vi.waitFor((): void => expect(running).toHaveLength(MAX_CONCURRENT_RUNS + 2));
+    expect(running[MAX_CONCURRENT_RUNS + 1]).toBe(ids[MAX_CONCURRENT_RUNS]);
   });
 });
 
@@ -134,5 +139,4 @@ describe('buildClaudeArguments', () => {
     expect(readOnly).not.toContain('Edit');
     expect(buildClaudeArguments({ ...INPUT, mode: RunMode.Edit })).toContain('acceptEdits');
   });
-
 });

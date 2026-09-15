@@ -92,11 +92,16 @@ describe('composeFigureRows', () => {
 
 const ARM_COLUMN = 1;
 
+/** Every frame of an animation, composed for the plain look. */
+function composeFrames(compose: (look: FigureLook, frame: number) => string[], count: number): string[][] {
+  return Array.from({ length: count }, (_: unknown, index: number): string[] => compose(PLAIN_LOOK, index));
+}
+
 describe('composeTypingRows', (): void => {
   it('keeps the template size, differs per frame, and brings the arms in from the sides', (): void => {
     const palette = buildFigurePalette(PLAIN_LOOK);
     const firstPose = TYPING_FRAMES[0] as Overlay;
-    const frames = Array.from({ length: TYPING_FRAME_COUNT }, (_: unknown, index: number): string[] => composeTypingRows(PLAIN_LOOK, index));
+    const frames = composeFrames(composeTypingRows, TYPING_FRAME_COUNT);
     frames.forEach((rows: string[]): void => {
       expect(rows).toHaveLength(FIGURE_HEIGHT);
       expect(getFrameWidth(rows)).toBe(FIGURE_WIDTH);
@@ -111,7 +116,7 @@ describe('composeTypingRows', (): void => {
 describe('composeWalkRows', (): void => {
   it('keeps the template size, lifts one foot per frame, and differs from the resting pose', (): void => {
     const palette = buildFigurePalette(PLAIN_LOOK);
-    const frames = Array.from({ length: WALK_FRAME_COUNT }, (_: unknown, index: number): string[] => composeWalkRows(PLAIN_LOOK, index));
+    const frames = composeFrames(composeWalkRows, WALK_FRAME_COUNT);
     frames.forEach((rows: string[]): void => {
       expect(rows).toHaveLength(FIGURE_HEIGHT);
       expect(getFrameWidth(rows)).toBe(FIGURE_WIDTH);
