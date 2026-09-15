@@ -3,6 +3,7 @@ import { RepoState } from '@shared/repo';
 import { CLOSE_ICON, DSButton } from '../designKit';
 import { useFloorsStore } from '../store/floorsStore';
 import { useRunsStore } from '../store/runsStore';
+import { useSprintsStore } from '../store/sprintsStore';
 import { useTasksStore } from '../store/tasksStore';
 
 import type React from 'react';
@@ -42,6 +43,7 @@ function FloorTab({ floor, isActive }: { floor: Floor; isActive: boolean }): Rea
     removeFloor(floor.id);
     useRunsStore.getState().clearFloor(floor.id);
     useTasksStore.getState().clearFloor(floor.id);
+    useSprintsStore.getState().clearFloor(floor.id);
   };
   return (
     <div className={`floor-tab floor-tab--${state}${isActive ? ' floor-tab--active' : ''}`} title={title}>

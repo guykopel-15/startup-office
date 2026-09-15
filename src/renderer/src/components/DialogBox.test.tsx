@@ -28,6 +28,7 @@ const MAYA = DEFAULT_FIGURES[0] as Figure;
 const GREETING = "Hi boss! I'm Maya, the frontend dev. What do you need?";
 const TYPEWRITER_MS = 2000;
 const TEXT_SELECTOR = '.dialog-box__text';
+let floorId = '';
 const RUN: AgentRun = { id: 'r', floorId: 'f', figureId: 'frontend', prompt: 'p', mode: RunMode.ReadOnly, status: RunStatus.Running, lines: ['▸ Read src/app.ts'], result: null, error: null, costUsd: null, turns: null, startedAt: '', endedAt: null };
 
 function DialogHarness(): React.JSX.Element {
@@ -48,7 +49,7 @@ beforeEach((): void => {
   callbacks.onShowWork.mockReset();
   callbacks.onOpen.mockReset();
   installOfficeMock();
-  seedReadyFloor([MAYA]);
+  floorId = seedReadyFloor([MAYA]);
 });
 
 afterEach((): void => {
@@ -86,7 +87,6 @@ describe('DialogBox', (): void => {
 
   it('keeps the greeting it opened with while the run streams, and reveals it all on click', async (): Promise<void> => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    const floorId = useFloorsStore.getState().activeFloorId ?? '';
     useRunsStore.getState().registerRun({ id: 'run-1', floorId, figureId: 'frontend', prompt: 'p', mode: RunMode.ReadOnly });
     useRunsStore.getState().applyEvent({ type: 'status', runId: 'run-1', status: RunStatus.Running });
     useRunsStore.getState().applyEvent({ type: 'chunk', runId: 'run-1', text: 'first line' });

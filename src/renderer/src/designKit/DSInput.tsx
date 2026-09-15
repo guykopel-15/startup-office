@@ -10,8 +10,16 @@ interface DSInputOwnProps {
   shouldAutoFocus?: boolean;
 }
 
+/** An input outside a DSField carries its own accessible name. */
+interface DSStandaloneInputProps {
+  id: string;
+  'aria-label': string;
+  'aria-invalid'?: undefined;
+  'aria-describedby'?: undefined;
+}
+
 /** Inside a DSField the field supplies the id and aria links; a standalone input must carry its own aria-label. */
-type DSInputProps = DSInputOwnProps & (DSFieldControlProps | { id: string; 'aria-label': string; 'aria-invalid'?: undefined; 'aria-describedby'?: undefined });
+type DSInputProps = DSInputOwnProps & (DSFieldControlProps | DSStandaloneInputProps);
 
 export function DSInput({ value, onChange, placeholder, maxLength, onKeyDown, shouldAutoFocus = false, ...inputProps }: DSInputProps): React.JSX.Element {
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>): void => onChange(event.target.value);

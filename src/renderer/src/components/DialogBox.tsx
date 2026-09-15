@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 
 import { MAX_TASK_LENGTH } from '@shared/tasks';
 import { isBlank } from '@shared/text';
-import { CLOSE_ICON, DSButton, DSButtonVariant, DSField, DSInput, ESCAPE_KEY, submitOnEnter } from '../designKit';
+import { CLOSE_ICON, DSButton, DSButtonVariant, DSField, DSInput, ENTER_KEY, ESCAPE_KEY, submitOnEnter } from '../designKit';
 import { FigurePreview } from './FigurePreview';
 import { DialogMode } from './useDialogBox';
 import { CANNOT_START_HINT } from './useGiveTask';
@@ -78,9 +78,11 @@ export function DialogBox({ dialog }: DialogBoxProps): React.JSX.Element | null 
   const { figure } = dialog;
   const handleKeyDown = (event: React.KeyboardEvent<HTMLElement>): void => {
     if (event.key === ESCAPE_KEY) dialog.close();
+    if (event.key === ENTER_KEY && !typewriter.isDone) typewriter.skip();
   };
   return (
-    <section className="dialog-box" role="dialog" aria-label={`${TALK_TO_PREFIX}${figure.name}`} onKeyDown={handleKeyDown}>
+    // A click anywhere on the box (not a control) reveals the whole line, like tapping through NPC text.
+    <section className="dialog-box" role="dialog" aria-label={`${TALK_TO_PREFIX}${figure.name}`} onKeyDown={handleKeyDown} onClick={typewriter.skip}>
       <div className="dialog-box__portrait">
         <FigurePreview look={figure.look} />
       </div>
@@ -89,9 +91,7 @@ export function DialogBox({ dialog }: DialogBoxProps): React.JSX.Element | null 
           <span className="dialog-box__name">{figure.name}</span>
           <span className="dialog-box__job">{figure.job}</span>
         </header>
-        <p className="dialog-box__text" onClick={typewriter.skip}>
-          {typewriter.shown}
-        </p>
+        <p className="dialog-box__text">{typewriter.shown}</p>
         {dialog.mode === DialogMode.Talk ? <Choices dialog={dialog} /> : <TaskForm dialog={dialog} />}
       </div>
       <div className="dialog-box__close">

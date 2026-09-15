@@ -10,6 +10,7 @@ export const BUBBLE_MAX_LENGTH = 56;
 const STOPPED_TEXT = 'Stopped.';
 const FAILED_PREFIX = 'Hmm, ';
 const FAILED_FALLBACK = 'something went wrong.';
+const CODE_FENCE = '```';
 
 /** "/Users/me/repo/src/index.ts" reads as "index.ts"; words without a slash are untouched. */
 function shortenPath(word: string): string {
@@ -26,8 +27,15 @@ export function bubbleTextForLine(line: string): string {
   return truncate(words.join(WORD_SEPARATOR).replace(WHITESPACE, WORD_SEPARATOR).trim(), BUBBLE_MAX_LENGTH);
 }
 
+/** Code fence lines are skipped: "```json" is not something to say. */
 function firstNonEmptyLine(text: string): string {
-  return text.split(LINE_SEPARATOR).map(cleanLine).find((candidate: string): boolean => candidate !== '') ?? '';
+  return (
+    text
+      .split(LINE_SEPARATOR)
+      .filter((candidate: string): boolean => !candidate.trim().startsWith(CODE_FENCE))
+      .map(cleanLine)
+      .find((candidate: string): boolean => candidate !== '') ?? ''
+  );
 }
 
 function lastNonEmptyLine(lines: readonly string[]): string {

@@ -6,6 +6,7 @@ vi.mock('phaser', async (): Promise<object> => (await import('../test/phaserMock
 
 import { RunMode, RunStatus } from '@shared/agents';
 import { DEFAULT_FIGURES } from '@shared/figures';
+import { CEO_AUTHOR_ID } from '@shared/tasks';
 import { useAgentEventsSubscription } from '../api/agentQueries';
 import { useFloorsStore } from '../store/floorsStore';
 import { useTasksStore } from '../store/tasksStore';
@@ -13,22 +14,26 @@ import { MOCK_RUN_ID, installOfficeMock, seedReadyFloor } from '../test/officeMo
 import { renderWithQueryClient } from '../test/renderWithQueryClient';
 import { Hud } from './Hud';
 import { useGiveTask } from './useGiveTask';
+import { useSprints } from './useSprints';
 
 import type React from 'react';
 import type { Floor } from '@shared/floors';
+import type { Task } from '@shared/tasks';
 import type { OfficeMock } from '../test/officeMock';
 
 const TEAM = DEFAULT_FIGURES.slice(0, 6);
 let office: OfficeMock;
+let floorId = '';
 
 function HudHarness(): React.JSX.Element {
   useAgentEventsSubscription();
-  return <Hud giveTask={useGiveTask(true)} />;
+  const giveTask = useGiveTask(true);
+  return <Hud giveTask={giveTask} sprints={useSprints(giveTask, true)} />;
 }
 
 beforeEach((): void => {
   office = installOfficeMock();
-  seedReadyFloor(TEAM);
+  floorId = seedReadyFloor(TEAM);
 });
 
 describe('Hud', (): void => {
@@ -54,7 +59,7 @@ describe('Hud', (): void => {
     renderWithQueryClient(<HudHarness />);
     await user.type(screen.getByLabelText('Chat'), '@Maya one{Enter}');
     await user.type(screen.getByLabelText('Chat'), '@Tom two{Enter}');
-    await vi.waitFor((): void => expect(useTasksStore.getState().tasks.every((task): boolean => task.runId === MOCK_RUN_ID)).toBe(true));
+    await vi.waitFor((): void => expect(useTasksStore.getState().tasks.every((task: Task): boolean => task.runId === MOCK_RUN_ID)).toBe(true));
     expect(useTasksStore.getState().tasks).toHaveLength(2);
   });
 
@@ -80,8 +85,7 @@ describe('Hud', (): void => {
 
   it('shows only the last line collapsed and everything expanded', async (): Promise<void> => {
     const user = userEvent.setup();
-    const floorId = useFloorsStore.getState().activeFloorId ?? '';
-    useTasksStore.getState().addMessage({ floorId, authorId: 'ceo', text: 'first' });
+    useTasksStore.getState().addMessage({ floorId, authorId: CEO_AUTHOR_ID, text: 'first' });
     useTasksStore.getState().addMessage({ floorId, authorId: 'qa', text: 'second' });
     renderWithQueryClient(<HudHarness />);
     expect(screen.queryByText('first')).not.toBeInTheDocument();

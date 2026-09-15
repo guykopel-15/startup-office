@@ -5,7 +5,6 @@ vi.mock('phaser', async (): Promise<object> => (await import('../test/phaserMock
 
 import { RunMode, RunStatus } from '@shared/agents';
 import { GameEvent, gameEvents } from '../game/events';
-import { useFloorsStore } from '../store/floorsStore';
 import { useRunsStore } from '../store/runsStore';
 import { installOfficeMock, seedReadyFloor } from '../test/officeMock';
 import { QueryWrapper } from '../test/renderWithQueryClient';
@@ -13,15 +12,16 @@ import { useAgentPanel } from './useAgentPanel';
 
 import type { FigureClickedPayload } from '../game/events';
 
+let floorId = '';
+
 beforeEach((): void => {
   installOfficeMock();
-  seedReadyFloor();
+  floorId = seedReadyFloor();
 });
 
 describe('useAgentPanel', (): void => {
   it('stays stable while runs stream in, and exposes the latest run of the open figure', (): void => {
     const { result } = renderHook((): ReturnType<typeof useAgentPanel> => useAgentPanel(true), { wrapper: QueryWrapper });
-    const floorId = useFloorsStore.getState().activeFloorId ?? '';
     act((): void => result.current.selectFigure('frontend'));
     expect(result.current.isOpen).toBe(true);
     act((): void => {

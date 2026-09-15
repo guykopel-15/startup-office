@@ -75,6 +75,12 @@ interface Mention {
   title: string;
 }
 
+interface MentionCandidate {
+  figure: Figure;
+  /** The name or id the mention may start with. */
+  label: string;
+}
+
 function words(text: string): string[] {
   return text.toLowerCase().match(WORD_PATTERN) ?? [];
 }
@@ -91,11 +97,13 @@ function findMention(text: string, figures: readonly Figure[]): Mention | undefi
   const match = MENTION_PATTERN.exec(text);
   const rest = match?.groups?.['rest'];
   if (match === null || match === undefined || rest === undefined) return undefined;
-  const candidates = figures.flatMap((figure: Figure): { figure: Figure; label: string }[] => [
+  const candidates = figures.flatMap((figure: Figure): MentionCandidate[] => [
     { figure, label: figure.name },
     { figure, label: figure.id },
   ]);
-  const hit = candidates.filter((candidate): boolean => startsWithLabel(rest, candidate.label)).sort((a, b): number => b.label.length - a.label.length)[0];
+  const hit = candidates
+    .filter((candidate: MentionCandidate): boolean => startsWithLabel(rest, candidate.label))
+    .sort((first: MentionCandidate, second: MentionCandidate): number => second.label.length - first.label.length)[0];
   if (hit === undefined) return undefined;
   const before = text.slice(0, match.index);
   const tail = rest.slice(hit.label.length).replace(LEADING_PUNCTUATION, '');

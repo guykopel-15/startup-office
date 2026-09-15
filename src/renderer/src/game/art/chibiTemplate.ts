@@ -56,6 +56,12 @@ export const TYPING_FRAMES: readonly Overlay[] = [
   { offsetY: 17, rows: ['. DTTSSTTTTSSTTD .', '. DTTttTTTTttTTD .', '. DTTTTTTTTTTTTD .'] },
 ];
 
+/** Legs mid-stride; two frames alternate while a figure walks. The lifted foot is erased. */
+export const WALK_FRAMES: readonly Overlay[] = [
+  { offsetY: 21, rows: ['...DPPPPPPPPPPD...', '..DPPPPPDDPPPPD...', '..DPPPPDDDDPPPD...', '..DBBBBD..DBBBD...', '..DDDDDD..     ...'] },
+  { offsetY: 21, rows: ['...DPPPPPPPPPPD...', '...DPPPPDDPPPPPD..', '...DPPPDDDDPPPPD..', '...DBBBD..DBBBBD..', '...     ..DDDDDD..'] },
+];
+
 const SPIKY_HAIR: Overlay = {
   offsetY: 0,
   rows: ['..D..DD..DD..D....', '.DhDDhhDDhhDDhD...', '.DhhhhhhhhhhhhhD..', '.DhhhhhhhhhhhhhD..', '..DhhHHHHHHHHhhD..'],

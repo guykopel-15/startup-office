@@ -1,6 +1,6 @@
 import type React from 'react';
 
-const ENTER_KEY = 'Enter';
+export const ENTER_KEY = 'Enter';
 export const ESCAPE_KEY = 'Escape';
 
 /** A key handler that submits on Enter, but not while an IME is still composing the text. */

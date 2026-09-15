@@ -4,7 +4,7 @@ vi.mock('phaser', () => ({ default: {} }));
 
 import { Accessory, DEFAULT_FIGURES, HairStyle } from '@shared/figures';
 import { BLINK_EYE_ROWS, FIGURE_HEIGHT, FIGURE_WIDTH, TYPING_FRAMES } from './chibiTemplate';
-import { TYPING_FRAME_COUNT, applyOverlay, buildFigurePalette, composeBlinkRows, composeFigureRows, composeTypingRows, mixColor } from './composeFigure';
+import { TYPING_FRAME_COUNT, WALK_FRAME_COUNT, applyOverlay, buildFigurePalette, composeBlinkRows, composeFigureRows, composeTypingRows, composeWalkRows, mixColor } from './composeFigure';
 import { TRANSPARENT_PIXEL, getFrameWidth, parsePixelRows } from './pixelArt';
 
 import type { Figure, FigureLook } from '@shared/figures';
@@ -92,16 +92,35 @@ describe('composeFigureRows', () => {
 
 const ARM_COLUMN = 1;
 
+/** Every frame of an animation, composed for the plain look. */
+function composeFrames(compose: (look: FigureLook, frame: number) => string[], count: number): string[][] {
+  return Array.from({ length: count }, (_: unknown, index: number): string[] => compose(PLAIN_LOOK, index));
+}
+
 describe('composeTypingRows', (): void => {
   it('keeps the template size, differs per frame, and brings the arms in from the sides', (): void => {
     const palette = buildFigurePalette(PLAIN_LOOK);
     const firstPose = TYPING_FRAMES[0] as Overlay;
-    const frames = Array.from({ length: TYPING_FRAME_COUNT }, (_: unknown, index: number): string[] => composeTypingRows(PLAIN_LOOK, index));
+    const frames = composeFrames(composeTypingRows, TYPING_FRAME_COUNT);
     frames.forEach((rows: string[]): void => {
       expect(rows).toHaveLength(FIGURE_HEIGHT);
       expect(getFrameWidth(rows)).toBe(FIGURE_WIDTH);
       expect((): PixelPoint[] => parsePixelRows(rows, palette)).not.toThrow();
       expect(rows[firstPose.offsetY]?.[ARM_COLUMN]).toBe(TRANSPARENT_PIXEL);
+    });
+    expect(frames[0]).not.toEqual(frames[1]);
+    expect(frames[0]).not.toEqual(composeFigureRows(PLAIN_LOOK));
+  });
+});
+
+describe('composeWalkRows', (): void => {
+  it('keeps the template size, lifts one foot per frame, and differs from the resting pose', (): void => {
+    const palette = buildFigurePalette(PLAIN_LOOK);
+    const frames = composeFrames(composeWalkRows, WALK_FRAME_COUNT);
+    frames.forEach((rows: string[]): void => {
+      expect(rows).toHaveLength(FIGURE_HEIGHT);
+      expect(getFrameWidth(rows)).toBe(FIGURE_WIDTH);
+      expect((): PixelPoint[] => parsePixelRows(rows, palette)).not.toThrow();
     });
     expect(frames[0]).not.toEqual(frames[1]);
     expect(frames[0]).not.toEqual(composeFigureRows(PLAIN_LOOK));

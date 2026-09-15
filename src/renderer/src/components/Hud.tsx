@@ -4,16 +4,21 @@ import { MAX_TASK_LENGTH, TaskStatus } from '@shared/tasks';
 import { isBlank } from '@shared/text';
 import { DSButton, DSButtonVariant, DSInput, submitOnEnter } from '../designKit';
 import { selectActiveFigures, useFloorsStore } from '../store/floorsStore';
+import { selectSprintForFloor, useSprintsStore } from '../store/sprintsStore';
 import { countTasks, selectMessagesForFloor, selectTasksForFloor, useTasksStore } from '../store/tasksStore';
 import { ChatLog } from './ChatLog';
+import { SprintBoard } from './SprintBoard';
 import { useHudChat } from './useHudChat';
 
 import type React from 'react';
+import type { Sprint } from '@shared/sprints';
 import type { ChatMessage, Task } from '@shared/tasks';
 import type { GiveTask } from './useGiveTask';
+import type { Sprints } from './useSprints';
 
 interface HudProps {
   giveTask: GiveTask;
+  sprints: Sprints;
 }
 
 interface QuestChip {
@@ -54,7 +59,7 @@ function QuestChips({ tasks }: { tasks: readonly Task[] }): React.JSX.Element {
 }
 
 /** Bottom bar: quest counts and the chat box that routes asks to figures. */
-export function Hud({ giveTask }: HudProps): React.JSX.Element {
+export function Hud({ giveTask, sprints }: HudProps): React.JSX.Element {
   const floorId = useFloorsStore((state): string | null => state.activeFloorId);
   const figures = useFloorsStore(selectActiveFigures);
   const allTasks = useTasksStore((state): readonly Task[] => state.tasks);
@@ -62,6 +67,8 @@ export function Hud({ giveTask }: HudProps): React.JSX.Element {
   // Select stable slices and derive here: a filtering selector would return a new array every render.
   const tasks = useMemo((): readonly Task[] => selectTasksForFloor({ tasks: allTasks }, floorId), [allTasks, floorId]);
   const messages = useMemo((): readonly ChatMessage[] => selectMessagesForFloor({ messages: allMessages }, floorId), [allMessages, floorId]);
+  const allSprints = useSprintsStore((state): readonly Sprint[] => state.sprints);
+  const sprint = useMemo((): Sprint | null => selectSprintForFloor({ sprints: allSprints }, floorId), [allSprints, floorId]);
   const chat = useHudChat(giveTask);
 
   return (
@@ -72,6 +79,7 @@ export function Hud({ giveTask }: HudProps): React.JSX.Element {
           {chat.isExpanded ? COLLAPSE_LABEL : EXPAND_LABEL}
         </DSButton>
       </div>
+      <SprintBoard sprint={sprint} tasks={tasks} figures={figures} canStart={giveTask.canGiveTasks} onStart={sprints.startSprint} />
       <ChatLog messages={messages} figures={figures} isExpanded={chat.isExpanded} />
       {chat.hint !== null && (
         <p className="hud__hint" role="status">

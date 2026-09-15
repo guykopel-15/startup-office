@@ -54,3 +54,8 @@ export function createPixelTexture(
   });
   texture.refresh();
 }
+
+/** Texture keys for an animation: `<idleKey><suffix>0`, `<idleKey><suffix>1`, … */
+export function frameTextureKeys(idleKey: string, suffix: string, count: number): string[] {
+  return Array.from({ length: count }, (_: unknown, index: number): string => `${idleKey}${suffix}${index}`);
+}

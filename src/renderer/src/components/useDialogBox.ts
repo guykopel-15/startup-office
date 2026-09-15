@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { findFigure } from '@shared/figures';
 import { isBlank } from '@shared/text';
@@ -55,6 +55,29 @@ function openDialogFor(figureId: string): OpenedDialog | null {
   return { floorId: floor.id, figureId, greeting: dialogGreeting(figure, selectLatestRun(useRunsStore.getState(), floor.id, figureId)) };
 }
 
+/** A figure click in the office opens the box on that figure. */
+function useOpenOnFigureClick(open: (dialog: OpenedDialog) => void, onOpen: () => void): void {
+  useEffect((): (() => void) => {
+    const handleFigureClicked = (payload: FigureClickedPayload): void => {
+      const next = openDialogFor(payload.figureId);
+      if (next === null) return;
+      open(next);
+      onOpen();
+    };
+    gameEvents.on(GameEvent.FigureClicked, handleFigureClicked);
+    return (): void => {
+      gameEvents.off(GameEvent.FigureClicked, handleFigureClicked);
+    };
+  }, [open, onOpen]);
+}
+
+/** The box belongs to the floor it opened on: switching or closing that floor closes it. */
+function useCloseOffFloor(isOpen: boolean, isOnActiveFloor: boolean, close: () => void): void {
+  useEffect((): void => {
+    if (isOpen && !isOnActiveFloor) close();
+  }, [isOpen, isOnActiveFloor, close]);
+}
+
 /** NPC dialog state: who is talking, what they say, and the choices. */
 export function useDialogBox(giveTask: GiveTask, callbacks: DialogBoxCallbacks): DialogBoxState {
   const floor = useFloorsStore(selectActiveFloor);
@@ -63,37 +86,24 @@ export function useDialogBox(giveTask: GiveTask, callbacks: DialogBoxCallbacks):
   const [text, setText] = useState('');
   const { onOpen, onShowWork } = callbacks;
 
-  const close = (): void => {
+  const close = useCallback((): void => {
     setOpened(null);
     setMode(DialogMode.Talk);
     setText('');
-  };
-
-  useEffect((): (() => void) => {
-    const handleFigureClicked = (payload: FigureClickedPayload): void => {
-      const next = openDialogFor(payload.figureId);
-      if (next === null) return;
-      setOpened(next);
-      setMode(DialogMode.Talk);
-      setText('');
-      onOpen();
-    };
-    gameEvents.on(GameEvent.FigureClicked, handleFigureClicked);
-    return (): void => {
-      gameEvents.off(GameEvent.FigureClicked, handleFigureClicked);
-    };
-  }, [onOpen]);
-
-  // The box belongs to the floor it opened on: switching or closing that floor closes it.
+  }, []);
+  const open = useCallback((dialog: OpenedDialog): void => {
+    setOpened(dialog);
+    setMode(DialogMode.Talk);
+    setText('');
+  }, []);
+  useOpenOnFigureClick(open, onOpen);
   const isOnActiveFloor = opened !== null && opened.floorId === floor?.id;
-  useEffect((): void => {
-    if (opened !== null && !isOnActiveFloor) close();
-  }, [opened, isOnActiveFloor]);
+  useCloseOffFloor(opened !== null, isOnActiveFloor, close);
 
   const figure = isOnActiveFloor ? findFigure(floor?.figures ?? [], opened.figureId) : null;
   const submit = (): void => {
     if (figure === null || isBlank(text)) return;
-    if (giveTask.giveTask(figure.id, text)) close();
+    if (giveTask.giveTask(figure.id, text) !== null) close();
   };
   const showWork = (): void => {
     if (figure !== null) onShowWork(figure.id);

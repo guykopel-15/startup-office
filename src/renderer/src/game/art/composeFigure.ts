@@ -1,5 +1,5 @@
 import { THEME_COLORS } from '@shared/theme';
-import { ACCESSORY_OVERLAYS, BASE_ROWS, BLINK_EYE_ROWS, HAIR_OVERLAYS, TYPING_FRAMES } from './chibiTemplate';
+import { ACCESSORY_OVERLAYS, BASE_ROWS, BLINK_EYE_ROWS, HAIR_OVERLAYS, TYPING_FRAMES, WALK_FRAMES } from './chibiTemplate';
 import { ERASE_PIXEL, TRANSPARENT_PIXEL } from './pixelArt';
 
 import type { FigureLook } from '@shared/figures';
@@ -87,3 +87,12 @@ export function composeTypingRows(look: FigureLook, frame: number): string[] {
 }
 
 export const TYPING_FRAME_COUNT = TYPING_FRAMES.length;
+
+/** The figure mid-stride; `frame` cycles the two leg poses. */
+export function composeWalkRows(look: FigureLook, frame: number): string[] {
+  const pose = WALK_FRAMES[frame % WALK_FRAMES.length];
+  const base = composeRows(BASE_ROWS, look);
+  return pose === undefined ? base : applyOverlay(base, pose);
+}
+
+export const WALK_FRAME_COUNT = WALK_FRAMES.length;

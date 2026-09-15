@@ -18,7 +18,9 @@ function fakeService(overrides: Partial<Record<'start' | 'cancel' | 'check', unk
 
 describe('DTO parsing', () => {
   it('accepts a complete start input and rejects bad modes or empty prompts', (): void => {
-    expect(parseStartRunDto(VALID)).toEqual(VALID);
+    expect(parseStartRunDto(VALID)).toEqual({ ...VALID, isPriority: false });
+    expect(parseStartRunDto({ ...VALID, isPriority: true })).toMatchObject({ isPriority: true });
+    expect(parseStartRunDto({ ...VALID, isPriority: 'yes' })).toBeNull();
     expect(parseStartRunDto({ ...VALID, mode: 'yolo' })).toBeNull();
     expect(parseStartRunDto({ ...VALID, prompt: '  ' })).toBeNull();
     expect(parseStartRunDto(null)).toBeNull();

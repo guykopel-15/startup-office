@@ -7,11 +7,12 @@ import { createPixelTexture } from '../art/pixelArt';
 import { DRAG_THRESHOLD_PIXELS } from '../camera/OfficeCamera';
 import { GameEvent, gameEvents } from '../events';
 import { DEPTH_RIM } from '../world/drawWalls';
-import { getDepth } from '../world/isoProjection';
+import { getDepth, projectToScreen } from '../world/isoProjection';
 import { BOTTOM_CENTER_X, BOTTOM_CENTER_Y } from './anchors';
 import { FigureBadge } from './FigureBadge';
 import { FigureBubble } from './FigureBubble';
 import { FigureTyping } from './FigureTyping';
+import { FigureWalker } from './FigureWalker';
 
 import type { Figure } from '@shared/figures';
 import type { FigureClickedPayload } from '../events';
@@ -41,58 +42,79 @@ const BADGE_DEPTH_BONUS = 0.6;
 const BUBBLE_DEPTH_BASE = DEPTH_RIM + 1;
 const TAG_SEPARATOR = ' · ';
 
-/** A seated figure: sprite, name tag, status badge, speech bubble, idle bob, blink, typing, hover, click. */
+/** A figure in the office: sprite, name tag, status badge, speech bubble, idle bob, blink, typing, walking, hover, click. */
 export class FigureSprite {
   readonly sprite: Phaser.GameObjects.Sprite;
   readonly tag: Phaser.GameObjects.Text;
   private readonly scene: Phaser.Scene;
   private readonly figure: Figure;
+  private readonly origin: ScreenPoint;
   private readonly idleKey: string;
   private readonly blinkKey: string;
   private readonly badge: FigureBadge;
   private readonly bubble: FigureBubble;
   private readonly typing: FigureTyping;
-  private readonly restY: number;
+  private readonly walker: FigureWalker;
+  private restX: number;
+  private restY: number;
   private bubbleRestY: number;
   private bobOffset = 0;
   private state: FigureState | null = null;
   private bobTween: Phaser.Tweens.Tween | null = null;
   private blinkTimer: Phaser.Time.TimerEvent | null = null;
 
-  constructor(scene: Phaser.Scene, figure: Figure, origin: ScreenPoint, feet: GridPoint, feetScreen: ScreenPoint) {
+  constructor(scene: Phaser.Scene, figure: Figure, origin: ScreenPoint, feet: GridPoint) {
     this.scene = scene;
     this.figure = figure;
+    this.origin = origin;
     this.idleKey = `${TEXTURE_KEY_PREFIX}${figure.id}`;
     this.blinkKey = `${this.idleKey}${BLINK_KEY_SUFFIX}`;
     this.ensureTextures();
-    const x = origin.x + feetScreen.x;
-    const y = origin.y + feetScreen.y;
+    const feetScreen = projectToScreen(feet);
+    this.restX = origin.x + feetScreen.x;
+    this.restY = origin.y + feetScreen.y;
     const depth = getDepth(feet);
-    this.sprite = scene.add.sprite(x, y, this.idleKey).setOrigin(BOTTOM_CENTER_X, BOTTOM_CENTER_Y).setDepth(depth);
+    this.sprite = scene.add.sprite(this.restX, this.restY, this.idleKey).setOrigin(BOTTOM_CENTER_X, BOTTOM_CENTER_Y).setDepth(depth);
     this.typing = new FigureTyping(scene, this.sprite, this.idleKey, figure.look);
-    this.tag = this.createTag(x, y - this.sprite.height - TAG_GAP, depth + TAG_DEPTH_BONUS);
-    this.restY = y;
+    this.walker = new FigureWalker(scene, this.sprite, this.idleKey, figure.look, feet);
+    this.tag = this.createTag(this.restX, this.restY - this.sprite.height - TAG_GAP, depth + TAG_DEPTH_BONUS);
     const tagTop = this.tag.y - this.tag.height;
-    this.badge = new FigureBadge(scene, x, tagTop - BADGE_GAP, depth + BADGE_DEPTH_BONUS);
+    this.badge = new FigureBadge(scene, this.restX, tagTop - BADGE_GAP, depth + BADGE_DEPTH_BONUS);
     this.bubbleRestY = tagTop - BUBBLE_GAP;
-    this.bubble = new FigureBubble(scene, x, this.bubbleRestY, BUBBLE_DEPTH_BASE + depth);
+    this.bubble = new FigureBubble(scene, this.restX, this.bubbleRestY, BUBBLE_DEPTH_BASE + depth);
     this.setState(figure.state);
     this.startIdle();
     this.wireInput();
   }
 
-  /** Switches badge and pose; the typing frames cycle only while working. Same state twice is a no-op. */
+  get feet(): GridPoint {
+    return this.walker.position;
+  }
+
+  get isWalking(): boolean {
+    return this.walker.isWalking;
+  }
+
+  /** Switches badge and pose; the typing frames cycle only while working at the desk. Same state twice is a no-op. */
   setState(state: FigureState): void {
     if (state === this.state) return;
     this.state = state;
     this.badge.setState(state);
     this.placeBubble();
-    if (state === FigureState.Working) {
-      this.typing.start();
-      return;
-    }
+    this.applyPose();
+    if (state !== FigureState.Working) this.bubble.release();
+  }
+
+  /** Walks along `path` (feet points); typing pauses on the way and resumes on arrival when still working. */
+  walkTo(path: readonly GridPoint[], onArrive: () => void): void {
     this.typing.stop();
-    this.bubble.release();
+    this.walker.walk(path, {
+      onStep: (feet: GridPoint): void => this.placeAt(feet),
+      onArrive: (): void => {
+        this.applyPose();
+        onArrive();
+      },
+    });
   }
 
   /** The bubble stays up while the figure works and fades a few seconds after any other line. */
@@ -105,16 +127,17 @@ export class FigureSprite {
     this.bubble.hide();
   }
 
-  /** Stops timers and tweens and removes every display object. */
+  /** Stops timers and tweens and removes every display object. Helpers go first: they still touch the sprite. */
   destroy(): void {
     this.bobTween?.remove();
     this.blinkTimer?.remove();
+    this.typing.destroy();
+    this.walker.destroy();
     this.sprite.removeAllListeners();
     this.sprite.destroy();
     this.tag.destroy();
     this.badge.destroy();
     this.bubble.destroy();
-    this.typing.destroy();
     [this.idleKey, this.blinkKey].forEach((key: string): void => void this.scene.textures.remove(key));
   }
 
@@ -132,6 +155,30 @@ export class FigureSprite {
       .setDepth(depth);
     text.setBackgroundColor(TAG_BACKGROUND);
     return text;
+  }
+
+  /** Typing runs only while working and standing still; walking shows the stride instead. */
+  private applyPose(): void {
+    if (this.state === FigureState.Working && !this.walker.isWalking) {
+      this.typing.start();
+      return;
+    }
+    this.typing.stop();
+  }
+
+  /** Moves everything to a new feet point and re-sorts it against walls and furniture. */
+  private placeAt(feet: GridPoint): void {
+    const feetScreen = projectToScreen(feet);
+    this.restX = this.origin.x + feetScreen.x;
+    this.restY = this.origin.y + feetScreen.y;
+    const depth = getDepth(feet);
+    this.sprite.setDepth(depth);
+    this.tag.setDepth(depth + TAG_DEPTH_BONUS);
+    this.badge.displayObject.setDepth(depth + BADGE_DEPTH_BONUS);
+    this.bubble.displayObject.setDepth(BUBBLE_DEPTH_BASE + depth);
+    const attached: readonly Phaser.GameObjects.Components.Transform[] = [this.sprite, this.tag, this.badge.displayObject, this.bubble.displayObject];
+    attached.forEach((object: Phaser.GameObjects.Components.Transform): void => void object.setX(this.restX));
+    this.placeBubble();
   }
 
   /** The bubble sits above the badge when one is showing, else right above the tag. */
@@ -176,13 +223,17 @@ export class FigureSprite {
     this.blinkTimer = this.scene.time.delayedCall(Phaser.Math.Between(BLINK_MIN_INTERVAL_MS, BLINK_MAX_INTERVAL_MS), this.handleBlinkStart, undefined, this);
   }
 
+  private get isPosing(): boolean {
+    return this.typing.isActive || this.walker.isWalking;
+  }
+
   private handleBlinkStart(): void {
-    if (!this.typing.isActive) this.sprite.setTexture(this.blinkKey);
+    if (!this.isPosing) this.sprite.setTexture(this.blinkKey);
     this.blinkTimer = this.scene.time.delayedCall(BLINK_DURATION_MS, this.handleBlinkEnd, undefined, this);
   }
 
   private handleBlinkEnd(): void {
-    if (!this.typing.isActive) this.sprite.setTexture(this.idleKey);
+    if (!this.isPosing) this.sprite.setTexture(this.idleKey);
     this.scheduleBlink();
   }
 

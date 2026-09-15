@@ -3,7 +3,7 @@ export { DSColorInput } from './DSColorInput';
 export { DSField } from './DSField';
 export { DSInput } from './DSInput';
 export { CLOSE_ICON, DSModal } from './DSModal';
-export { ESCAPE_KEY, submitOnEnter } from './keyboard';
+export { ENTER_KEY, ESCAPE_KEY, submitOnEnter } from './keyboard';
 export { DSProgressBar } from './DSProgressBar';
 export { DSSelect } from './DSSelect';
 export { DSTextArea } from './DSTextArea';

@@ -62,7 +62,10 @@ export class AgentService {
     const run: QueuedRun = { id: `${RUN_ID_PREFIX}${this.nextRunNumber}`, input, running: null, isCancelled: false };
     this.nextRunNumber += 1;
     this.runs.set(run.id, run);
-    this.queue.push(run);
+    // Priority runs go ahead of ordinary ones but behind earlier priority runs, so two meetings keep their order.
+    const firstOrdinary = this.queue.findIndex((queued: QueuedRun): boolean => queued.input.isPriority !== true);
+    if (input.isPriority === true && firstOrdinary !== -1) this.queue.splice(firstOrdinary, 0, run);
+    else this.queue.push(run);
     this.emit({ type: 'status', runId: run.id, status: RunStatus.Queued });
     this.pump();
     return run.id;
@@ -73,7 +76,8 @@ export class AgentService {
     if (run === undefined) throw new ServiceError(AgentErrorCode.UnknownRun, `Unknown run ${runId}`);
     run.isCancelled = true;
     if (run.running !== null) return run.running.cancel();
-    this.queue.splice(this.queue.indexOf(run), 1);
+    const index = this.queue.indexOf(run);
+    if (index !== -1) this.queue.splice(index, 1);
     this.finish(run, RunStatus.Cancelled, null, CANCELLED_MESSAGE, null, null);
   }
 
