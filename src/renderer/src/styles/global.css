@@ -54,6 +54,7 @@ body,
   flex: 1;
   min-height: 200px;
   display: flex;
+  overflow: hidden;
 }
 
 /* MapleStory-style NPC dialog: portrait on the left, typed text and choices on the right. */
@@ -194,6 +195,103 @@ body,
 .hud__chat .ds-input {
   flex: 1;
   min-width: 0;
+}
+
+.sprint-board {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sprint-board__form {
+  display: flex;
+  gap: 8px;
+}
+
+.sprint-board__form .ds-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.sprint-board__summary {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  background: var(--bg);
+  border: 2px solid var(--border);
+  border-radius: 6px;
+}
+
+.sprint-board__goal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.sprint-board__goal-text {
+  font-weight: 700;
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+
+.sprint-board__status {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.sprint-board__status--planning {
+  color: var(--accent);
+  animation: repo-chip-pulse 1s ease-in-out infinite;
+}
+
+.sprint-board__status--active {
+  color: var(--success);
+}
+
+.sprint-board__tasks {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: min(120px, 20vh);
+  overflow-y: auto;
+  font-size: 12px;
+}
+
+.sprint-board__task {
+  display: flex;
+  gap: 8px;
+  color: var(--muted);
+}
+
+.sprint-board__task--active {
+  color: var(--text);
+}
+
+.sprint-board__task--done {
+  color: var(--success);
+}
+
+.sprint-board__task--failed {
+  color: var(--danger);
+}
+
+.sprint-board__assignee {
+  flex-shrink: 0;
+  font-weight: 700;
+}
+
+.sprint-board__title {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .chat-log {

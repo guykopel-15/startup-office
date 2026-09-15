@@ -127,7 +127,16 @@ interface AgentRun {             // src/shared/agents.ts; a quest points at its 
   endedAt: string | null;
 }
 
-interface Sprint { id: string; name: string; goal: string; taskIds: string[]; status: 'planning' | 'active' | 'closed' }
+interface Sprint {                // src/shared/sprints.ts
+  id: string;
+  floorId: string;
+  goal: string;
+  status: 'planning' | 'active' | 'closed';
+  planRunId: string | null;      // the product manager's planning run
+  taskIds: string[];
+  createdAt: string;
+  closedAt: string | null;
+}
 
 enum RepoState { Idle, Cloning, Ready, Error }
 
@@ -168,11 +177,13 @@ interface Floor { id: string; name: string; source: FloorSource; repoStatus: Rep
 |---|---|
 | Map | One 640×360 world drawn procedurally: 48×34 tile isometric plan (2:1 tiles). Wall geometry, palette and furniture kits follow the owner's design handoff (`docs/design/handoff.md`); the room program stays the §3 departments on a rectangular plate. Far walls tall and opaque with windows, near edges low rims, interior walls 0.6 tile thick with door gaps, per-room floors (tile, orange, checker, corridor runner), wall decor (whiteboard, charts, sticky notes, posters). Exterior walls and rims are one Graphics each; every interior wall tile, furniture piece and figure is its own depth-sorted object |
 | Furniture | Desk (monitor, keyboard, optional mug / lamp / paper), big desk, meeting table with laptop and chairs, bookshelf, server rack with LEDs, water cooler, sofa, filing cabinet, safe, kitchen counter, fridge, round table, stools, plants. Figures sit behind their desk so the desk top hides the legs |
-| Camera | Fits the office on resize when the user had not zoomed; otherwise keeps their zoom and re-clamps. Wheel zoom toward the pointer, left-drag pan |
+| Camera | Fits the office on resize when the user had not zoomed; otherwise keeps their zoom and re-clamps. Wheel zoom toward the pointer, left-drag pan. `GameCanvas` watches its host with a ResizeObserver, so the HUD growing (chat history, sprint board) refits the office too, not only window resizes |
 | Figures | Sit at desk with idle bob and random blink; hover scales the figure and expands the name tag to the job. State comes from the floors store: `working` cycles two typing frames (arms on the keyboard, drawn as an overlay that erases the resting arms) and animated dots above the tag; `done` shows a green tick badge, `error` a red cross; `idle` shows no badge. Walking to the meeting room arrives with task 11 |
 | Interaction | Releasing the pointer on a figure without dragging emits `figure:clicked`, which opens the DialogBox on it; the agent panel opens from the box's Show your work, the Agents button or the panel's figure select |
 | DialogBox | React overlay at the bottom of the stage: pixel portrait, name and job, the greeting typed one character at a time and frozen when the box opens (`dialogText.ts`: hello when idle, "I'm in the queue" when queued, "On it, boss. <last line>" while running, the summarized result when done, the error when failed, "I stopped that one." when cancelled; a click reveals it all, Escape closes, focus returns to the canvas), choices Give a task (inline input, Enter sends) / Show your work / Bye |
 | HUD | Bottom bar in flow under the office so the camera fits the rest: quest counts (active / done / failed), chat history (collapsed to the last line, expandable), chat box. `routeTask` (`src/shared/tasks.ts`) picks the assignee: @name or @id mention (punctuation, multi-word and non-Latin names allowed; an unknown mention stays in the text), else the figure scoring most job words and known keywords (earlier figure on a tie), else `pm`, else the first figure |
+| Movement | `navigation.ts` builds a walkable grid (walls and furniture block tiles, chairs and stools do not) and finds tile paths by breadth-first search; `FigureWalker` moves the feet along the path at a constant speed, cycles two leg frames and flips the sprite to face the way it goes. `FigureDirector` owns errands: every few seconds one idle figure walks to a random tile of its own room, waits, and comes back; a `meeting` state sends the figure to a spot around the meeting table (chairs first); work pulls it home. Typing only runs at the desk |
+| Sprints | `useSprints`: Start sprint posts the goal, sets every figure to `meeting`, and starts the product manager's planning run (`buildPlanningPrompt`, read-only, `isPriority` so it jumps the intake queue; the prompt caps the skim at a few tool calls). While a floor's sprint is planning, run events do not change figure states, so nobody leaves the table early. When it ends, `parsePlan` reads the JSON (or "id: task" lines); each part becomes a quest through `giveTaskOnFloor`, the figure says "I'll take: …" (chat + bubble via `figure:says`), teammates without a part go idle. The sprint closes when every quest ended: summary in the chat and `sprint:closed` bursts confetti in the scene. The HUD's SprintBoard shows goal, status, progress bar and quests |
 | Bubbles | The scene subscribes to `runsStore`; for each seated figure the latest run yields one line (`bubbleText.ts`): the last streamed line while running (tool notes read as "Reading src/x.ts"), the first non-empty result line when done, "Hmm, <error>" on error, "Stopped." when cancelled. Absolute paths shrink to their file name, markdown marks stripped, 56 chars max, pop-in on show. The bubble stays up while the figure works and fades 6 s after its last line once the run ends; a floor switch hides bubbles and only new lines pop. Bubbles sit in a UI depth band above every wall and figure |
 | Juice | Level-up burst, floating red numbers on `failed`, confetti on sprint close |
 | Sound | Chiptune loop per room, keyboard clatter scaled to active agents, level-up sting |
@@ -219,7 +230,7 @@ One task = one branch = one PR, in order.
 | 8 | Agent runner | `claude -p` per figure, streamed to AgentPanel, intake run on floor ready |
 | 9 | Figure states | typing frames while working, done / error badges, speech bubbles from the run output |
 | 10 | NPC dialog + HUD chat | DialogBox on click with Give a task / Show your work; HUD chat routes asks by mention or keywords; quests and replies |
-| 11 | Meeting room + sprints | Sprint board, figures walk to planning, confetti on close |
+| 11 | Movement + sprints | Figures wander their room; sprint = planning meeting → quest per figure → board, progress, confetti |
 | 12 | XP + juice | Levels, level-up burst, failed numbers, sounds |
 | 13 | Persistence | Figures, tasks, sprints, world survive restart |
 | 14 | Polish + README | Screenshots, GIF, packaging with electron-builder |

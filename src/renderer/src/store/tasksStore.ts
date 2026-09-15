@@ -109,14 +109,15 @@ export const useTasksStore = create<TasksState>((set: StoreApi<TasksState>['setS
     const status = TASK_STATUS_BY_RUN_STATUS[run.status];
     const task = get().tasks.find((candidate: Task): boolean => candidate.runId === run.id);
     if (status === undefined || task === undefined) return;
-    set({ tasks: patchTaskById(get().tasks, task.id, (candidate: Task): Task => ({ ...candidate, status })) });
+    // The reply lands before the status flips, so anything reacting to the ending (a sprint closing) speaks after it.
     get().addMessage({ floorId: run.floorId, authorId: run.figureId, text: replyTextForRun(run) });
+    set({ tasks: patchTaskById(get().tasks, task.id, (candidate: Task): Task => ({ ...candidate, status })) });
   },
   failTask: (taskId: string, reason: string): void => {
     const task = get().tasks.find((candidate: Task): boolean => candidate.id === taskId);
     if (task === undefined) return;
-    set({ tasks: patchTaskById(get().tasks, taskId, (candidate: Task): Task => ({ ...candidate, status: TaskStatus.Failed })) });
     get().addMessage({ floorId: task.floorId, authorId: task.assigneeId, text: reason });
+    set({ tasks: patchTaskById(get().tasks, taskId, (candidate: Task): Task => ({ ...candidate, status: TaskStatus.Failed })) });
   },
   clearFloor: (floorId: string): void => {
     set({ tasks: get().tasks.filter((task: Task): boolean => task.floorId !== floorId), messages: get().messages.filter((message: ChatMessage): boolean => message.floorId !== floorId) });

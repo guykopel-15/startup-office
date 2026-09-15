@@ -62,7 +62,8 @@ export class AgentService {
     const run: QueuedRun = { id: `${RUN_ID_PREFIX}${this.nextRunNumber}`, input, running: null, isCancelled: false };
     this.nextRunNumber += 1;
     this.runs.set(run.id, run);
-    this.queue.push(run);
+    if (input.isPriority === true) this.queue.unshift(run);
+    else this.queue.push(run);
     this.emit({ type: 'status', runId: run.id, status: RunStatus.Queued });
     this.pump();
     return run.id;

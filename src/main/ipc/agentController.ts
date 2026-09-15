@@ -30,7 +30,8 @@ export function parseStartRunDto(payload: unknown): StartRunInput | null {
   const mode = stringField(record, 'mode');
   if (floorId === null || figureId === null || cwd === null || prompt === null || mode === null || !RUN_MODES.includes(mode)) return null;
   if (prompt.trim() === '') return null;
-  return { floorId, figureId, cwd, prompt, mode: mode as RunMode };
+  const isPriority = record['isPriority'] === true;
+  return { floorId, figureId, cwd, prompt, mode: mode as RunMode, isPriority };
 }
 
 export function parseRunIdDto(payload: unknown): string | null {

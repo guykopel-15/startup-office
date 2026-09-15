@@ -40,6 +40,7 @@ describe('bubbleTextForRun', (): void => {
     expect(bubbleTextForRun(RUN)).toBeNull();
     expect(bubbleTextForRun({ ...RUN, lines: ['   ', '```', '▸ '] })).toBeNull();
     expect(bubbleTextForRun({ ...RUN, status: RunStatus.Done, result: ' \n\n' })).toBeNull();
+    expect(bubbleTextForRun({ ...RUN, status: RunStatus.Done, result: '```json\n[{"figureId":"qa"}]\n```' })).toBeNull();
   });
 
   it('picks the last non-empty line while running and the first result line when done', (): void => {

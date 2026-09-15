@@ -109,6 +109,21 @@ describe('AgentService', () => {
     expect(done[1]).toMatchObject({ runId: runningId, status: RunStatus.Cancelled });
     expect((): void => service.cancel('run-999')).toThrow();
   });
+  it('starts a priority run before the rest of the queue', async (): Promise<void> => {
+    const control = controllableRunner();
+    const service = new AgentService(fakeBinary, undefined, control.runner);
+    const running: string[] = [];
+    service.onEvent((event: AgentEvent): void => {
+      if (event.type === 'status' && event.status === RunStatus.Running) running.push(event.runId);
+    });
+    const ids: string[] = [];
+    for (let index = 0; index < MAX_CONCURRENT_RUNS + 2; index += 1) ids.push(await service.start(INPUT));
+    const priorityId = await service.start({ ...INPUT, isPriority: true });
+    expect(running).toEqual(ids.slice(0, MAX_CONCURRENT_RUNS));
+    control.release(0);
+    await vi.waitFor((): void => expect(running).toHaveLength(MAX_CONCURRENT_RUNS + 1));
+    expect(running[MAX_CONCURRENT_RUNS]).toBe(priorityId);
+  });
 });
 
 describe('buildClaudeArguments', () => {
@@ -119,4 +134,5 @@ describe('buildClaudeArguments', () => {
     expect(readOnly).not.toContain('Edit');
     expect(buildClaudeArguments({ ...INPUT, mode: RunMode.Edit })).toContain('acceptEdits');
   });
+
 });

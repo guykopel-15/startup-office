@@ -93,7 +93,7 @@ export function useDialogBox(giveTask: GiveTask, callbacks: DialogBoxCallbacks):
   const figure = isOnActiveFloor ? findFigure(floor?.figures ?? [], opened.figureId) : null;
   const submit = (): void => {
     if (figure === null || isBlank(text)) return;
-    if (giveTask.giveTask(figure.id, text)) close();
+    if (giveTask.giveTask(figure.id, text) !== null) close();
   };
   const showWork = (): void => {
     if (figure !== null) onShowWork(figure.id);

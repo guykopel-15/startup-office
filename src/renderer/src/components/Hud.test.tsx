@@ -13,6 +13,7 @@ import { MOCK_RUN_ID, installOfficeMock, seedReadyFloor } from '../test/officeMo
 import { renderWithQueryClient } from '../test/renderWithQueryClient';
 import { Hud } from './Hud';
 import { useGiveTask } from './useGiveTask';
+import { useSprints } from './useSprints';
 
 import type React from 'react';
 import type { Floor } from '@shared/floors';
@@ -23,7 +24,8 @@ let office: OfficeMock;
 
 function HudHarness(): React.JSX.Element {
   useAgentEventsSubscription();
-  return <Hud giveTask={useGiveTask(true)} />;
+  const giveTask = useGiveTask(true);
+  return <Hud giveTask={giveTask} sprints={useSprints(giveTask, true)} />;
 }
 
 beforeEach((): void => {

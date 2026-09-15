@@ -4,6 +4,7 @@
 
 | Version | Date | Changes |
 |---|---|---|
+| 1.0.11 | 2026-09-15 | **Added:** movement: idle figures get up now and then, walk to a spot in their own room and come back (walk frames, tile pathfinding around desks and through the doors); sprints: **Start sprint** in the HUD takes a goal, calls the whole team to the meeting room, the product manager's `claude` session splits the goal into one task per teammate (JSON plan, read-only look at the repo), every part becomes a quest, each figure says its part at the table and walks back to work; sprint board with goal, status, progress bar and the quests; the sprint closes when every quest ends, with confetti and a summary in the chat; `sprintsStore`; sprint capture scripts; runs can carry `isPriority` so the planning session jumps the floor's queue. **Changed:** a figure's `meeting` state sends it to the meeting table and holds while the plan is being made (run events do not pull a figure out of the meeting); walk speed 4.5 tiles/s; closing a floor tab also clears its sprints. **Fixed:** the office refits when the HUD grows (chat history, sprint board), not only on window resize |
 | 1.0.10 | 2026-09-15 | **Changed:** review fixes for the dialog box and HUD chat: a quest's run id is attached inside the start mutation so two quick asks never lose a reply; the greeting is frozen when the box opens (no restart while the run streams); the box closes on a floor switch, on Escape, focuses its first choice and hands focus back; @mentions accept punctuation, multi-word and non-Latin names, unknown mentions stay in the text; Enter ignores IME composition; chat history capped per floor; HUD height capped so the office never collapses; shared text helpers, `findFigure`, close icon and success/danger color tokens; shared test helpers and more tests. **Fixed:** README safety section says runs are read-only; spec model and error table brought up to date |
 | 1.0.9 | 2026-09-15 | **Added:** NPC dialog box: clicking a figure opens a MapleStory-style box with its portrait, a typed greeting (hello, what it is doing right now, or its last result) and the choices Give a task / Show your work / Bye; HUD bar under the office with quest counts (active, done, failed), the chat history and a chat box: an ask goes to the figure you @mention, else to the one whose job or keywords match (tests → QA, api → backend, budget → accountant…), else to the product manager; every ask becomes a quest and the figure's reply lands in the chat when its run ends; tasks store; `startupOfficeDev.clickFigure` dev hook for captures. **Changed:** figure clicks open the dialog box instead of the agent panel (the panel opens from Show your work or the Agents button); `DSInput` can carry its own aria-label; closing a floor tab now clears its runs, quests and chat; every run, tasks included, is read-only for now (Read, Grep, Glob) |
 | 1.0.8 | 2026-09-15 | **Added:** figure states in the office: a typing animation (arms on the keyboard) while a figure works, a badge above the name tag (animated dots while working, green tick when done, red cross on error) and a MapleStory-style speech bubble that shows the figure's latest output line, tool note, first result line, error, or "Stopped." when you stop it, so on load you watch the whole team read the repo. **Changed:** the scene now diffs figure state and run output from the stores instead of only seating and removing figures |
@@ -86,9 +87,16 @@ its desk typing, and a speech bubble above it shows the agent's latest line.
    what it would change rather than changing it.
 
    ![HUD chat](docs/images/hud-chat.png)
-5. **Run sprints.** Tasks are quests. Open the sprint board in the meeting room, drag
-   quests in, and start the sprint. Figures walk to the meeting room for planning,
-   then back to their desks to work.
+5. **Run sprints.** Press **Start sprint** in the HUD and type the goal. Everyone walks to
+   the meeting room, the product manager reads the repo and splits the goal into one task per
+   teammate, each figure says its part at the table, then walks back and works on it. The sprint
+   board shows the goal, the progress bar and every quest with its assignee; when the last quest
+   ends the sprint closes with confetti and a summary in the chat. Between tasks, figures get up
+   and wander their own room.
+
+   ![Sprint planning in the meeting room](docs/images/sprint-meeting.png)
+
+   ![Sprint board](docs/images/sprint-board.png)
 6. **Grow the team.** Press **Add figure** in the navbar (the `+` button in a narrow window).
    Pick a department with a free desk, give the person a name, job and look, optionally a role
    prompt (it defaults from the job), and they sit down.
@@ -138,8 +146,8 @@ Other scripts: `npm test`, `npm run typecheck`, `npm run build`, `npm run icon` 
 when launching to capture the window to a file and quit, which is how the README images are made.
 `STARTUP_OFFICE_WINDOW=300x600` opens the window at a given size, for checking small layouts.
 `STARTUP_OFFICE_SCRIPT=<file>` (together with `STARTUP_OFFICE_SCREENSHOT`) runs a script in the page
-before the capture, to open dialogs or fill forms; `npm run screenshot-scripts` writes the eight page scripts used
-for the README images into `scripts/screenshots/generated/` (`floorsReady.js` clones this repo; `figureStates.js` runs real `claude` sessions on a local folder and waits 45 s, or `--hold-ms=<n>`, for the badges and bubbles; `dialogBox.js` opens the box through the dev-only `window.startupOfficeDev.clickFigure` hook; `hudChat.js` types into the chat and waits for the reply). All three variables are ignored in packaged builds. The app works down to a 300px wide window:
+before the capture, to open dialogs or fill forms; `npm run screenshot-scripts` writes the ten page scripts used
+for the README images into `scripts/screenshots/generated/` (`floorsReady.js` clones this repo; `figureStates.js` runs real `claude` sessions on a local folder and waits 45 s, or `--hold-ms=<n>`, for the badges and bubbles; `dialogBox.js` opens the box through the dev-only `window.startupOfficeDev.clickFigure` hook; `hudChat.js` types into the chat and waits for the reply; `sprintMeeting.js` and `sprintBoard.js` start a sprint and capture the meeting and, later, the plan). All three variables are ignored in packaged builds. The app works down to a 300px wide window:
 
 ![The office in a 300px window](docs/images/office-300px.png)
 
@@ -160,7 +168,7 @@ One task = one branch = one pull request, built in order.
 | 8 | Agent runner | `claude -p` per figure, streamed to a panel, intake run on repo load | ✅ |
 | 9 | Figure states | typing while working, done tick / error cross badge, speech bubble with the latest line | ✅ |
 | 10 | NPC dialog + HUD chat | Dialog box on click with Give a task / Show your work; HUD chat routes an ask by @mention or keywords; quests and replies | ✅ |
-| 11 | Meeting room + sprints | Sprint board, figures walk to planning, confetti on close | ☐ |
+| 11 | Movement + sprints | Figures wander their room; Start sprint → planning meeting → one quest per figure → board, progress, confetti | ✅ |
 | 12 | XP + juice | Levels, level-up burst, damage numbers, sounds | ☐ |
 | 13 | Persistence | Figures, tasks, sprints, world survive restart | ☐ |
 | 14 | Polish | Screenshots, GIF, packaged `.dmg` | ☐ |

@@ -14,6 +14,7 @@ import { useAgentPanel } from './components/useAgentPanel';
 import { useAutoIntake } from './components/useAutoIntake';
 import { useDialogBox } from './components/useDialogBox';
 import { useGiveTask } from './components/useGiveTask';
+import { useSprints } from './components/useSprints';
 import { GameCanvas } from './game/GameCanvas';
 import { useFloorsStore } from './store/floorsStore';
 
@@ -26,6 +27,7 @@ export function App(): React.JSX.Element {
   const panel = useAgentPanel(isClaudeAvailable);
   const giveTask = useGiveTask(isClaudeAvailable);
   const dialog = useDialogBox(giveTask, { onShowWork: panel.selectFigure, onOpen: panel.close });
+  const sprints = useSprints(giveTask, isClaudeAvailable);
   const hasFloors = useFloorsStore((state): boolean => state.floors.length > 0);
   const [isAddFigureOpen, setIsAddFigureOpen] = useState(false);
   const [isNewFloorOpen, setIsNewFloorOpen] = useState(false);
@@ -46,7 +48,7 @@ export function App(): React.JSX.Element {
             <DialogBox dialog={dialog} />
             <AgentPanel panel={panel} availability={availability.data} />
           </div>
-          {hasFloors && <Hud giveTask={giveTask} />}
+          {hasFloors && <Hud giveTask={giveTask} sprints={sprints} />}
         </main>
       </div>
       <AddFigureDialog isOpen={isAddFigureOpen} onClose={handleCloseAddFigure} />

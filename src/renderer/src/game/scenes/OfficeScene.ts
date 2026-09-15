@@ -3,14 +3,18 @@ import Phaser from 'phaser';
 import { createLogger } from '@shared/logger';
 import { HALF } from '@shared/theme';
 import { OfficeCamera } from '../camera/OfficeCamera';
+import { FigureDirector } from '../entities/FigureDirector';
 import { FigureSprite } from '../entities/FigureSprite';
 import { nextBubbleText } from '../entities/bubbleText';
+import { burstConfetti } from '../entities/confetti';
+import { GameEvent, gameEvents } from '../events';
 import { SLAB_DEPTH, drawFloors } from '../world/drawFloors';
 import { drawFurniture } from '../world/drawFurniture';
 import { drawWalls } from '../world/drawWalls';
 import { PLAN_RECT } from '../world/floorPlan';
 import { getDeskForFigure, getFurniture, getSeatPoint } from '../world/furniture';
-import { getRectCorners, getScreenBounds, projectToScreen } from '../world/isoProjection';
+import { getRectCorners, getScreenBounds } from '../world/isoProjection';
+import { buildWalkableGrid } from '../world/navigation';
 import { PALETTE } from '../world/palette';
 import { EXTERIOR_WALL_HEIGHT } from '../world/walls';
 import { selectActiveFigures, useFloorsStore } from '../../store/floorsStore';
@@ -18,6 +22,7 @@ import { selectLatestRunsByFigure, useRunsStore } from '../../store/runsStore';
 
 import type { AgentRun } from '@shared/agents';
 import type { Figure } from '@shared/figures';
+import type { FigureSaysPayload, SprintClosedPayload } from '../events';
 import type { Furniture } from '../world/furniture';
 import type { ScreenBounds, ScreenPoint } from '../world/isoProjection';
 import type { FloorsState } from '../../store/floorsStore';
@@ -34,6 +39,7 @@ const GLOW_RADIUS_X = 420;
 const GLOW_RADIUS_Y = 300;
 const GLOW_CENTER_Y_RATIO = 0.2;
 const GLOW_ALPHA = 0.16;
+const CONFETTI_Y_RATIO = 0.3;
 
 const logger = createLogger('office-scene');
 
@@ -43,6 +49,7 @@ export class OfficeScene extends Phaser.Scene {
   private lastBubbles = new Map<string, string>();
   private shownFloorId: string | null = null;
   private officeCamera: OfficeCamera | null = null;
+  private director: FigureDirector | null = null;
   private furniture: Furniture[] = [];
   private origin: ScreenPoint = { x: 0, y: 0 };
   private unsubscribeFigures: (() => void) | null = null;
@@ -59,9 +66,12 @@ export class OfficeScene extends Phaser.Scene {
     drawWalls(this, this.origin);
     this.furniture = getFurniture();
     this.furniture.forEach((piece: Furniture): void => drawFurniture(this, this.origin, piece));
+    this.director = new FigureDirector(this, buildWalkableGrid(this.furniture), this.furniture);
     this.syncFigures(useFloorsStore.getState());
     this.unsubscribeFigures = useFloorsStore.subscribe(this.handleFloorsChange);
     this.unsubscribeRuns = useRunsStore.subscribe(this.handleRunsChange);
+    gameEvents.on(GameEvent.FigureSays, this.handleFigureSays, this);
+    gameEvents.on(GameEvent.SprintClosed, this.handleSprintClosed, this);
     this.officeCamera = new OfficeCamera(this, getOfficeBounds(this.origin));
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.handleShutdown, this);
     this.events.once(Phaser.Scenes.Events.DESTROY, this.handleShutdown, this);
@@ -73,11 +83,12 @@ export class OfficeScene extends Phaser.Scene {
     const wanted = new Set(figures.map((figure: Figure): string => figure.id));
     this.figureSprites.forEach((sprite: FigureSprite, id: string): void => {
       if (wanted.has(id)) return;
+      this.director?.remove(id);
       sprite.destroy();
       this.figureSprites.delete(id);
     });
     figures.filter((figure: Figure): boolean => !this.figureSprites.has(figure.id)).forEach((figure: Figure): void => this.seatFigure(figure));
-    figures.forEach((figure: Figure): void => this.figureSprites.get(figure.id)?.setState(figure.state));
+    figures.forEach((figure: Figure): void => this.director?.setState(figure.id, figure.state));
     if (state.activeFloorId !== this.shownFloorId) this.enterFloor(state.activeFloorId);
   }
 
@@ -111,8 +122,10 @@ export class OfficeScene extends Phaser.Scene {
       logger.warn('figure has no desk', { id: figure.id, room: figure.room, deskIndex: figure.deskIndex });
       return;
     }
-    const feet = getSeatPoint(desk);
-    this.figureSprites.set(figure.id, new FigureSprite(this, figure, this.origin, feet, projectToScreen(feet)));
+    const seat = getSeatPoint(desk);
+    const sprite = new FigureSprite(this, figure, this.origin, seat);
+    this.figureSprites.set(figure.id, sprite);
+    this.director?.add(figure.id, sprite, figure.room, seat, figure.state);
   }
 
   private readonly handleFloorsChange = (state: FloorsState): void => {
@@ -123,11 +136,26 @@ export class OfficeScene extends Phaser.Scene {
     this.syncBubbles(state);
   };
 
+  private handleFigureSays(payload: FigureSaysPayload): void {
+    if (payload.floorId !== this.shownFloorId) return;
+    this.lastBubbles.set(payload.figureId, payload.text);
+    this.figureSprites.get(payload.figureId)?.say(payload.text);
+  }
+
+  private handleSprintClosed(payload: SprintClosedPayload): void {
+    if (payload.floorId !== this.shownFloorId) return;
+    burstConfetti(this, WORLD_WIDTH * HALF, WORLD_HEIGHT * CONFETTI_Y_RATIO);
+  }
+
   private handleShutdown(): void {
     this.unsubscribeFigures?.();
     this.unsubscribeFigures = null;
     this.unsubscribeRuns?.();
     this.unsubscribeRuns = null;
+    gameEvents.off(GameEvent.FigureSays, this.handleFigureSays, this);
+    gameEvents.off(GameEvent.SprintClosed, this.handleSprintClosed, this);
+    this.director?.destroy();
+    this.director = null;
     this.officeCamera?.destroy();
     this.officeCamera = null;
     this.figureSprites.forEach((sprite: FigureSprite): void => sprite.destroy());

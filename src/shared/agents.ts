@@ -21,6 +21,8 @@ export interface StartRunInput {
   cwd: string;
   prompt: string;
   mode: RunMode;
+  /** Jumps the queue: a sprint planning meeting should not wait behind a floor's intake runs. */
+  isPriority?: boolean;
 }
 
 /** One `claude` session, as the renderer tracks it. */

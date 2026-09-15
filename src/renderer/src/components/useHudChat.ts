@@ -45,7 +45,7 @@ export function useHudChat(giveTask: GiveTask): HudChatState {
       setHint(figures.length === 0 ? NOBODY_HINT : MENTION_ONLY_HINT);
       return;
     }
-    if (!giveTask.giveTask(routed.assigneeId, routed.title)) {
+    if (giveTask.giveTask(routed.assigneeId, routed.title) === null) {
       setHint(CANNOT_START_HINT);
       return;
     }
