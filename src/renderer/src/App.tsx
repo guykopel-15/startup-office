@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 
 import { useAgentEventsSubscription, useClaudeAvailability } from './api/agentQueries';
 import { useRepoStatusSubscription } from './api/repoQueries';
+import { useHydration, usePersistence } from './api/stateQueries';
 import { AddFigureDialog } from './components/AddFigureDialog';
 import { AgentPanel } from './components/AgentPanel';
 import { DialogBox } from './components/DialogBox';
@@ -15,6 +16,7 @@ import { useAutoIntake } from './components/useAutoIntake';
 import { useDialogBox } from './components/useDialogBox';
 import { useGiveTask } from './components/useGiveTask';
 import { useSprints } from './components/useSprints';
+import { DSNotice } from './designKit';
 import { GameCanvas } from './game/GameCanvas';
 import { useFloorsStore } from './store/floorsStore';
 
@@ -23,7 +25,10 @@ export function App(): React.JSX.Element {
   useAgentEventsSubscription();
   const availability = useClaudeAvailability();
   const isClaudeAvailable = availability.data?.isAvailable === true;
-  useAutoIntake(isClaudeAvailable);
+  const hydration = useHydration();
+  usePersistence(hydration.isHydrated);
+  // Intake waits for the saved office: a restored floor already read its repo.
+  useAutoIntake(isClaudeAvailable && hydration.isHydrated);
   const panel = useAgentPanel(isClaudeAvailable);
   const giveTask = useGiveTask(isClaudeAvailable);
   const dialog = useDialogBox(giveTask, { onShowWork: panel.selectFigure, onOpen: panel.close });
@@ -44,6 +49,7 @@ export function App(): React.JSX.Element {
         <main className="app__main">
           <div className="app__stage">
             <GameCanvas />
+            <DSNotice message={hydration.warning} />
             {!hasFloors && <OfficeEmptyState onNewFloor={handleOpenNewFloor} />}
             <DialogBox dialog={dialog} />
             <AgentPanel panel={panel} availability={availability.data} />

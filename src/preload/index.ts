@@ -1,11 +1,13 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
 import { AgentChannel } from '../shared/agents';
+import { StateChannel } from '../shared/persistence';
 import { RepoChannel } from '../shared/repo';
 
 import type { IpcRendererEvent } from 'electron';
 import type { AgentEvent, ClaudeAvailability, StartRunInput } from '../shared/agents';
-import type { AgentsApi, OfficeApi, RepoApi } from '../shared/api';
+import type { AgentsApi, OfficeApi, RepoApi, StateApi } from '../shared/api';
+import type { LoadStateResult, Snapshot } from '../shared/persistence';
 import type { RepoStatus, RepoStatusEvent } from '../shared/repo';
 import type { ApiResponse } from '../shared/response';
 
@@ -33,11 +35,17 @@ const agents: AgentsApi = {
   onEvent: (listener: (event: AgentEvent) => void): (() => void) => subscribe(AgentChannel.Event, listener),
 };
 
+const state: StateApi = {
+  load: (): Promise<ApiResponse<LoadStateResult>> => ipcRenderer.invoke(StateChannel.Load),
+  save: (snapshot: Snapshot): Promise<ApiResponse<null>> => ipcRenderer.invoke(StateChannel.Save, snapshot),
+};
+
 const api: OfficeApi = {
   version: __APP_VERSION__,
   platform: process.platform,
   repo,
   agents,
+  state,
 };
 
 contextBridge.exposeInMainWorld('office', api);

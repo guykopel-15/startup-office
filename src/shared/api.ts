@@ -1,4 +1,5 @@
 import type { AgentEvent, ClaudeAvailability, StartRunInput } from './agents';
+import type { LoadStateResult, Snapshot } from './persistence';
 import type { RepoStatus, RepoStatusEvent } from './repo';
 import type { ApiResponse } from './response';
 
@@ -23,6 +24,12 @@ export interface AgentsApi {
   onEvent: (listener: (event: AgentEvent) => void) => () => void;
 }
 
+export interface StateApi {
+  /** The office saved by the last session, or null on a first start. */
+  load: () => Promise<ApiResponse<LoadStateResult>>;
+  save: (snapshot: Snapshot) => Promise<ApiResponse<null>>;
+}
+
 /** Typed bridge exposed on `window.office` by the preload script. Grows with each task. */
 export interface OfficeApi {
   version: string;
@@ -30,6 +37,7 @@ export interface OfficeApi {
   platform: string;
   repo: RepoApi;
   agents: AgentsApi;
+  state: StateApi;
 }
 
 declare global {

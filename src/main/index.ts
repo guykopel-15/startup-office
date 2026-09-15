@@ -3,14 +3,17 @@ import { join } from 'node:path';
 import { app, BrowserWindow, shell } from 'electron';
 
 import { createLogger } from '../shared/logger';
+import { STATE_FILE_NAME } from '../shared/persistence';
 import { readConfig } from './config';
 import { registerAgentController } from './ipc/agentController';
 import { registerRepoController } from './ipc/repoController';
+import { registerStateController } from './ipc/stateController';
 import { AgentService } from './services/agentService';
 import { killRunningClaude } from './services/claudeRunner';
 import { killRunningGit } from './services/gitRunner';
 import { RepoService } from './services/repoService';
 import { captureWindowToFile } from './services/screenshotService';
+import { StateStore } from './services/stateStore';
 import {
   APP_ICON_PATH,
   APP_NAME,
@@ -78,6 +81,7 @@ void app.whenReady().then(() => {
   logger.info('app ready');
   registerRepoController(new RepoService(app.getPath('userData')));
   registerAgentController(new AgentService(config.claudeBinary, config.pathVariable));
+  registerStateController(new StateStore(join(app.getPath('userData'), STATE_FILE_NAME)));
   if (config.isDarwin && !app.isPackaged) app.dock?.setIcon(APP_ICON_PATH);
   const mainWindow = createWindow();
   app.on('activate', handleActivate);

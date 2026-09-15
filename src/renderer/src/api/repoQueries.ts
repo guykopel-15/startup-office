@@ -20,7 +20,8 @@ export function useRepoStatusSubscription(): void {
   useEffect((): (() => void) => window.office.repo.onStatus((event: RepoStatusEvent): void => setRepoStatus(event.floorId, event.status)), [setRepoStatus]);
 }
 
-async function prepareRepo(input: PrepareRepoInput): Promise<RepoStatus> {
+/** Clones a GitHub repo or adopts a local folder for a floor. */
+export async function prepareRepo(input: PrepareRepoInput): Promise<RepoStatus> {
   if (input.source.kind === FloorSourceKind.GitHub) return unwrapResponse(await window.office.repo.load(input.floorId, input.source.url));
   return unwrapResponse(await window.office.repo.useLocal(input.floorId, input.source.path));
 }

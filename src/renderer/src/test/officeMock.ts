@@ -35,6 +35,7 @@ export function installOfficeMock(): OfficeMock {
     platform: 'darwin',
     repo: { load: vi.fn(), useLocal: vi.fn(), getStatus: vi.fn(), pickFolder: vi.fn(), onStatus: vi.fn().mockReturnValue((): void => undefined) },
     agents: { check: vi.fn(), start: vi.fn().mockResolvedValue({ isOk: true, data: MOCK_RUN_ID }), cancel: vi.fn().mockResolvedValue({ isOk: true, data: null }), onEvent },
+    state: { load: vi.fn().mockResolvedValue({ isOk: true, data: { snapshot: null, warning: null } }), save: vi.fn().mockResolvedValue({ isOk: true, data: null }) },
   };
   return { emitAgentEvent: (event: AgentEvent): void => listener?.(event) };
 }
