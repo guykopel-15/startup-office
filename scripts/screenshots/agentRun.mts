@@ -2,7 +2,7 @@
  * Builds the page script for the agent panel capture: one local floor, open the panel on the
  * first figure and wait for its intake run (started automatically) to finish.
  */
-import { SAMPLE_FLOORS, buildFloorsReadyScript } from './newFloor.mts';
+import { buildLocalFloorSetup } from './newFloor.mts';
 import { pageScript } from './pageHelpers.mts';
 
 const AGENTS_BUTTON_LABEL = 'Agents';
@@ -14,9 +14,7 @@ const ERROR_STATUS_CLASS = 'run-output__status--error';
 
 /** Page script: set up the local sample floor, open the agent panel, wait for the first figure's run to end. */
 export function buildAgentRunScript(): string {
-  const localFloor = SAMPLE_FLOORS[1] ?? SAMPLE_FLOORS[0];
-  const floorSetup = localFloor === undefined ? '' : `const floorResult = await ${buildFloorsReadyScript([localFloor]).trim()}\n  if (floorResult !== undefined) return floorResult;`;
-  return pageScript(`${floorSetup}
+  return pageScript(`${buildLocalFloorSetup()}
   document.querySelector('[aria-label=${JSON.stringify(AGENTS_BUTTON_LABEL)}]').click();
   {
     const started = Date.now();

@@ -4,6 +4,7 @@ import { createLogger } from '@shared/logger';
 import { HALF } from '@shared/theme';
 import { OfficeCamera } from '../camera/OfficeCamera';
 import { FigureSprite } from '../entities/FigureSprite';
+import { nextBubbleText } from '../entities/bubbleText';
 import { SLAB_DEPTH, drawFloors } from '../world/drawFloors';
 import { drawFurniture } from '../world/drawFurniture';
 import { drawWalls } from '../world/drawWalls';
@@ -13,11 +14,14 @@ import { getRectCorners, getScreenBounds, projectToScreen } from '../world/isoPr
 import { PALETTE } from '../world/palette';
 import { EXTERIOR_WALL_HEIGHT } from '../world/walls';
 import { selectActiveFigures, useFloorsStore } from '../../store/floorsStore';
+import { selectLatestRunsByFigure, useRunsStore } from '../../store/runsStore';
 
+import type { AgentRun } from '@shared/agents';
 import type { Figure } from '@shared/figures';
 import type { Furniture } from '../world/furniture';
 import type { ScreenBounds, ScreenPoint } from '../world/isoProjection';
 import type { FloorsState } from '../../store/floorsStore';
+import type { RunsState } from '../../store/runsStore';
 
 export const OFFICE_SCENE_KEY = 'office';
 const WORLD_WIDTH = 640;
@@ -36,10 +40,13 @@ const logger = createLogger('office-scene');
 /** The whole floor plan on one screen. The camera fits the office to the window at any size. */
 export class OfficeScene extends Phaser.Scene {
   private figureSprites = new Map<string, FigureSprite>();
+  private lastBubbles = new Map<string, string>();
+  private shownFloorId: string | null = null;
   private officeCamera: OfficeCamera | null = null;
   private furniture: Furniture[] = [];
   private origin: ScreenPoint = { x: 0, y: 0 };
   private unsubscribeFigures: (() => void) | null = null;
+  private unsubscribeRuns: (() => void) | null = null;
 
   constructor() {
     super(OFFICE_SCENE_KEY);
@@ -54,12 +61,13 @@ export class OfficeScene extends Phaser.Scene {
     this.furniture.forEach((piece: Furniture): void => drawFurniture(this, this.origin, piece));
     this.syncFigures(useFloorsStore.getState());
     this.unsubscribeFigures = useFloorsStore.subscribe(this.handleFloorsChange);
+    this.unsubscribeRuns = useRunsStore.subscribe(this.handleRunsChange);
     this.officeCamera = new OfficeCamera(this, getOfficeBounds(this.origin));
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.handleShutdown, this);
     this.events.once(Phaser.Scenes.Events.DESTROY, this.handleShutdown, this);
   }
 
-  /** Mirrors the active floor: removes sprites that left it, seats figures that joined it. */
+  /** Mirrors the active floor: removes sprites that left it, seats figures that joined it, pushes states. */
   private syncFigures(state: FloorsState): void {
     const figures = selectActiveFigures(state);
     const wanted = new Set(figures.map((figure: Figure): string => figure.id));
@@ -69,6 +77,32 @@ export class OfficeScene extends Phaser.Scene {
       this.figureSprites.delete(id);
     });
     figures.filter((figure: Figure): boolean => !this.figureSprites.has(figure.id)).forEach((figure: Figure): void => this.seatFigure(figure));
+    figures.forEach((figure: Figure): void => this.figureSprites.get(figure.id)?.setState(figure.state));
+    if (state.activeFloorId !== this.shownFloorId) this.enterFloor(state.activeFloorId);
+  }
+
+  /** A floor switch hides old speech and remembers what each figure last said, so only new lines pop. */
+  private enterFloor(floorId: string | null): void {
+    this.shownFloorId = floorId;
+    this.lastBubbles.clear();
+    this.figureSprites.forEach((sprite: FigureSprite): void => sprite.hideBubble());
+    if (floorId === null) return;
+    selectLatestRunsByFigure(useRunsStore.getState(), floorId).forEach((run: AgentRun, figureId: string): void => {
+      const text = nextBubbleText(undefined, run);
+      if (text !== null) this.lastBubbles.set(figureId, text);
+    });
+  }
+
+  /** Lets each figure say the latest line of its latest run, once per new line. */
+  private syncBubbles(runs: RunsState): void {
+    if (this.shownFloorId === null) return;
+    const latestRuns = selectLatestRunsByFigure(runs, this.shownFloorId);
+    this.figureSprites.forEach((sprite: FigureSprite, figureId: string): void => {
+      const text = nextBubbleText(this.lastBubbles.get(figureId), latestRuns.get(figureId) ?? null);
+      if (text === null) return;
+      this.lastBubbles.set(figureId, text);
+      sprite.say(text);
+    });
   }
 
   private seatFigure(figure: Figure): void {
@@ -85,13 +119,21 @@ export class OfficeScene extends Phaser.Scene {
     this.syncFigures(state);
   };
 
+  private readonly handleRunsChange = (state: RunsState): void => {
+    this.syncBubbles(state);
+  };
+
   private handleShutdown(): void {
     this.unsubscribeFigures?.();
     this.unsubscribeFigures = null;
+    this.unsubscribeRuns?.();
+    this.unsubscribeRuns = null;
     this.officeCamera?.destroy();
     this.officeCamera = null;
     this.figureSprites.forEach((sprite: FigureSprite): void => sprite.destroy());
     this.figureSprites.clear();
+    this.lastBubbles.clear();
+    this.shownFloorId = null;
   }
 
   /** Radial glow approximated with concentric ellipses, the handoff's background gradient. */

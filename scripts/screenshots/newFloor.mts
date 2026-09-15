@@ -57,3 +57,10 @@ export function buildFloorsReadyScript(floors: readonly SampleFloor[]): string {
   ${waitForReadyTabs(floors.length)}
   document.querySelector('.floor-tab__select').click();`);
 }
+
+/** Statements that set up the local sample floor and bail out with the page error, if any. */
+export function buildLocalFloorSetup(): string {
+  const localFloor = SAMPLE_FLOORS[1] ?? SAMPLE_FLOORS[0];
+  if (localFloor === undefined) return '';
+  return `const floorResult = await ${buildFloorsReadyScript([localFloor]).trim()}\n  if (floorResult !== undefined) return floorResult;`;
+}

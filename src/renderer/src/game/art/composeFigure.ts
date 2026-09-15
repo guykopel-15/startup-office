@@ -1,6 +1,6 @@
 import { THEME_COLORS } from '@shared/theme';
-import { ACCESSORY_OVERLAYS, BASE_ROWS, BLINK_EYE_ROWS, HAIR_OVERLAYS } from './chibiTemplate';
-import { TRANSPARENT_PIXEL } from './pixelArt';
+import { ACCESSORY_OVERLAYS, BASE_ROWS, BLINK_EYE_ROWS, HAIR_OVERLAYS, TYPING_FRAMES } from './chibiTemplate';
+import { ERASE_PIXEL, TRANSPARENT_PIXEL } from './pixelArt';
 
 import type { FigureLook } from '@shared/figures';
 import type { Overlay } from './chibiTemplate';
@@ -56,7 +56,8 @@ export function applyOverlay(base: readonly string[], overlay: Overlay): string[
     if (overlayRow === undefined) return row;
     return Array.from(row, (character: string, x: number): string => {
       const overlayCharacter = overlayRow[x];
-      return overlayCharacter === undefined || overlayCharacter === TRANSPARENT_PIXEL ? character : overlayCharacter;
+      if (overlayCharacter === undefined || overlayCharacter === TRANSPARENT_PIXEL) return character;
+      return overlayCharacter === ERASE_PIXEL ? TRANSPARENT_PIXEL : overlayCharacter;
     }).join('');
   });
 }
@@ -77,3 +78,12 @@ export function composeBlinkRows(look: FigureLook): string[] {
     look,
   );
 }
+
+/** The figure typing: hair and accessory as usual, arms on the keyboard. `frame` cycles the two poses. */
+export function composeTypingRows(look: FigureLook, frame: number): string[] {
+  const pose = TYPING_FRAMES[frame % TYPING_FRAMES.length];
+  const base = composeRows(BASE_ROWS, look);
+  return pose === undefined ? base : applyOverlay(base, pose);
+}
+
+export const TYPING_FRAME_COUNT = TYPING_FRAMES.length;

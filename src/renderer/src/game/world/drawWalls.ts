@@ -14,7 +14,8 @@ import type { WallBox } from './walls';
 
 /** Far walls never interleave with anything, near rims sit in front of everything. */
 const DEPTH_EXTERIOR = -800;
-const DEPTH_RIM = 10000;
+/** Near rims sit above every world object; UI such as speech bubbles starts above this. */
+export const DEPTH_RIM = 10000;
 const BASEBOARD_HEIGHT = 0.06;
 /** Decor must beat every wall piece it spans, so it takes the far end's depth plus a step. */
 const DECOR_DEPTH_STEP = 1;

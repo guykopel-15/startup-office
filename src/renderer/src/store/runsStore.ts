@@ -54,6 +54,15 @@ export function selectLatestRun(state: { runs: readonly AgentRun[] }, floorId: s
   return runs[runs.length - 1] ?? null;
 }
 
+/** The latest run of every figure on `floorId`, keyed by figure id, in one pass over the runs. */
+export function selectLatestRunsByFigure(state: { runs: readonly AgentRun[] }, floorId: string): Map<string, AgentRun> {
+  const latest = new Map<string, AgentRun>();
+  state.runs.forEach((run: AgentRun): void => {
+    if (run.floorId === floorId) latest.set(run.figureId, run);
+  });
+  return latest;
+}
+
 export function isRunActive(run: AgentRun | null): boolean {
   return run !== null && (run.status === RunStatus.Queued || run.status === RunStatus.Running);
 }

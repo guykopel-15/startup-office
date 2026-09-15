@@ -67,6 +67,8 @@ export enum AgentErrorCode {
   Failed = 'AGENT_FAILED',
 }
 
+/** Prefix of a streamed tool-use note such as "▸ Read src/index.ts"; shared by the stream parser and the renderer. */
+export const TOOL_NOTE_PREFIX = '▸';
 export const MAX_CONCURRENT_RUNS = 3;
 export const RUN_TIMEOUT_MS = 10 * 60 * 1000;
 export const MAX_TURNS = 25;

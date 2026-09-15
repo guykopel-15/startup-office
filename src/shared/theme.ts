@@ -11,4 +11,6 @@ export const THEME_COLORS = {
 } as const;
 
 export const GAME_FONT_FAMILY = 'monospace';
+/** Canvas text is rendered at this multiple of its size so pixel-scaled labels stay crisp. */
+export const GAME_TEXT_RESOLUTION = 4;
 export const HALF = 0.5;

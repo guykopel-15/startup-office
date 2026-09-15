@@ -1,18 +1,22 @@
 import Phaser from 'phaser';
 
-import { GAME_FONT_FAMILY, THEME_COLORS } from '@shared/theme';
+import { FigureState } from '@shared/figures';
+import { GAME_FONT_FAMILY, GAME_TEXT_RESOLUTION, THEME_COLORS } from '@shared/theme';
 import { buildFigurePalette, composeBlinkRows, composeFigureRows } from '../art/composeFigure';
 import { createPixelTexture } from '../art/pixelArt';
 import { DRAG_THRESHOLD_PIXELS } from '../camera/OfficeCamera';
 import { GameEvent, gameEvents } from '../events';
+import { DEPTH_RIM } from '../world/drawWalls';
 import { getDepth } from '../world/isoProjection';
+import { BOTTOM_CENTER_X, BOTTOM_CENTER_Y } from './anchors';
+import { FigureBadge } from './FigureBadge';
+import { FigureBubble } from './FigureBubble';
+import { FigureTyping } from './FigureTyping';
 
 import type { Figure } from '@shared/figures';
 import type { FigureClickedPayload } from '../events';
 import type { GridPoint, ScreenPoint } from '../world/isoProjection';
 
-const BOTTOM_CENTER_X = 0.5;
-const BOTTOM_CENTER_Y = 1;
 const BOB_DISTANCE = 1;
 const BOB_DURATION_MS = 900;
 const BOB_MAX_START_DELAY_MS = 800;
@@ -21,18 +25,23 @@ const BLINK_MIN_INTERVAL_MS = 2500;
 const BLINK_MAX_INTERVAL_MS = 6000;
 const BLINK_DURATION_MS = 120;
 const HOVER_SCALE = 1.08;
+const REST_SCALE = 1;
 const TEXTURE_KEY_PREFIX = 'figure-';
 const BLINK_KEY_SUFFIX = '-blink';
 const TAG_FONT_SIZE = '5px';
-const TAG_RESOLUTION = 4;
 const TAG_BACKGROUND = 'rgba(14, 10, 26, 0.8)';
 const TAG_PADDING_X = 2;
 const TAG_PADDING_Y = 1;
 const TAG_GAP = 3;
+const BADGE_GAP = 2;
+const BUBBLE_GAP = 3;
 const TAG_DEPTH_BONUS = 0.5;
+const BADGE_DEPTH_BONUS = 0.6;
+/** Speech is UI: it sits above every wall and figure, ordered among bubbles by the figure's depth. */
+const BUBBLE_DEPTH_BASE = DEPTH_RIM + 1;
 const TAG_SEPARATOR = ' · ';
 
-/** A seated figure: sprite, name tag, idle bob, blink, hover, click. Call `destroy()` to remove it. */
+/** A seated figure: sprite, name tag, status badge, speech bubble, idle bob, blink, typing, hover, click. */
 export class FigureSprite {
   readonly sprite: Phaser.GameObjects.Sprite;
   readonly tag: Phaser.GameObjects.Text;
@@ -40,6 +49,13 @@ export class FigureSprite {
   private readonly figure: Figure;
   private readonly idleKey: string;
   private readonly blinkKey: string;
+  private readonly badge: FigureBadge;
+  private readonly bubble: FigureBubble;
+  private readonly typing: FigureTyping;
+  private readonly restY: number;
+  private bubbleRestY: number;
+  private bobOffset = 0;
+  private state: FigureState | null = null;
   private bobTween: Phaser.Tweens.Tween | null = null;
   private blinkTimer: Phaser.Time.TimerEvent | null = null;
 
@@ -51,23 +67,55 @@ export class FigureSprite {
     this.ensureTextures();
     const x = origin.x + feetScreen.x;
     const y = origin.y + feetScreen.y;
-    this.sprite = scene.add.sprite(x, y, this.idleKey).setOrigin(BOTTOM_CENTER_X, BOTTOM_CENTER_Y).setDepth(getDepth(feet));
-    this.tag = this.createTag(x, y - this.sprite.height - TAG_GAP, getDepth(feet) + TAG_DEPTH_BONUS);
+    const depth = getDepth(feet);
+    this.sprite = scene.add.sprite(x, y, this.idleKey).setOrigin(BOTTOM_CENTER_X, BOTTOM_CENTER_Y).setDepth(depth);
+    this.typing = new FigureTyping(scene, this.sprite, this.idleKey, figure.look);
+    this.tag = this.createTag(x, y - this.sprite.height - TAG_GAP, depth + TAG_DEPTH_BONUS);
+    this.restY = y;
+    const tagTop = this.tag.y - this.tag.height;
+    this.badge = new FigureBadge(scene, x, tagTop - BADGE_GAP, depth + BADGE_DEPTH_BONUS);
+    this.bubbleRestY = tagTop - BUBBLE_GAP;
+    this.bubble = new FigureBubble(scene, x, this.bubbleRestY, BUBBLE_DEPTH_BASE + depth);
+    this.setState(figure.state);
     this.startIdle();
     this.wireInput();
   }
 
-  /** Stops the tween and blink chain and removes both display objects. */
+  /** Switches badge and pose; the typing frames cycle only while working. Same state twice is a no-op. */
+  setState(state: FigureState): void {
+    if (state === this.state) return;
+    this.state = state;
+    this.badge.setState(state);
+    this.placeBubble();
+    if (state === FigureState.Working) {
+      this.typing.start();
+      return;
+    }
+    this.typing.stop();
+    this.bubble.release();
+  }
+
+  /** The bubble stays up while the figure works and fades a few seconds after any other line. */
+  say(message: string): void {
+    this.placeBubble();
+    this.bubble.say(message, this.state === FigureState.Working);
+  }
+
+  hideBubble(): void {
+    this.bubble.hide();
+  }
+
+  /** Stops timers and tweens and removes every display object. */
   destroy(): void {
     this.bobTween?.remove();
-    this.bobTween = null;
     this.blinkTimer?.remove();
-    this.blinkTimer = null;
     this.sprite.removeAllListeners();
     this.sprite.destroy();
     this.tag.destroy();
-    this.scene.textures.remove(this.idleKey);
-    this.scene.textures.remove(this.blinkKey);
+    this.badge.destroy();
+    this.bubble.destroy();
+    this.typing.destroy();
+    [this.idleKey, this.blinkKey].forEach((key: string): void => void this.scene.textures.remove(key));
   }
 
   private ensureTextures(): void {
@@ -78,7 +126,7 @@ export class FigureSprite {
 
   private createTag(x: number, y: number, depth: number): Phaser.GameObjects.Text {
     const text = this.scene.add
-      .text(x, y, this.figure.name, { fontFamily: GAME_FONT_FAMILY, fontSize: TAG_FONT_SIZE, color: THEME_COLORS.text, resolution: TAG_RESOLUTION })
+      .text(x, y, this.figure.name, { fontFamily: GAME_FONT_FAMILY, fontSize: TAG_FONT_SIZE, color: THEME_COLORS.text, resolution: GAME_TEXT_RESOLUTION })
       .setOrigin(BOTTOM_CENTER_X, BOTTOM_CENTER_Y)
       .setPadding(TAG_PADDING_X, TAG_PADDING_Y, TAG_PADDING_X, TAG_PADDING_Y)
       .setDepth(depth);
@@ -86,17 +134,42 @@ export class FigureSprite {
     return text;
   }
 
+  /** The bubble sits above the badge when one is showing, else right above the tag. */
+  private placeBubble(): void {
+    const tagTop = this.restY - this.sprite.height - TAG_GAP - this.tag.height;
+    const badgeSpace = this.badge.isVisible ? this.badge.height + BADGE_GAP : 0;
+    this.bubbleRestY = tagTop - badgeSpace - BUBBLE_GAP;
+    this.applyBob();
+  }
+
+  /** The bob is a counter so repositioning the bubble never fights the tween. */
   private startIdle(): void {
-    this.bobTween = this.scene.tweens.add({
-      targets: [this.sprite, this.tag],
-      y: `-=${BOB_DISTANCE}`,
+    this.bobTween = this.scene.tweens.addCounter({
+      from: 0,
+      to: BOB_DISTANCE,
       duration: BOB_DURATION_MS,
       yoyo: true,
       repeat: TWEEN_REPEAT_FOREVER,
       ease: Phaser.Math.Easing.Sine.InOut,
       delay: Phaser.Math.Between(0, BOB_MAX_START_DELAY_MS),
+      onUpdate: this.handleBob,
+      callbackScope: this,
     });
     this.scheduleBlink();
+  }
+
+  private handleBob(tween: Phaser.Tweens.Tween): void {
+    this.bobOffset = tween.getValue() ?? 0;
+    this.applyBob();
+  }
+
+  /** Moves the figure and everything attached to it by the current bob offset. */
+  private applyBob(): void {
+    const tagRestY = this.restY - this.sprite.height - TAG_GAP;
+    this.sprite.setY(this.restY - this.bobOffset);
+    this.tag.setY(tagRestY - this.bobOffset);
+    this.badge.displayObject.setY(tagRestY - this.tag.height - BADGE_GAP - this.bobOffset);
+    this.bubble.displayObject.setY(this.bubbleRestY - this.bobOffset);
   }
 
   private scheduleBlink(): void {
@@ -104,12 +177,12 @@ export class FigureSprite {
   }
 
   private handleBlinkStart(): void {
-    this.sprite.setTexture(this.blinkKey);
+    if (!this.typing.isActive) this.sprite.setTexture(this.blinkKey);
     this.blinkTimer = this.scene.time.delayedCall(BLINK_DURATION_MS, this.handleBlinkEnd, undefined, this);
   }
 
   private handleBlinkEnd(): void {
-    this.sprite.setTexture(this.idleKey);
+    if (!this.typing.isActive) this.sprite.setTexture(this.idleKey);
     this.scheduleBlink();
   }
 
@@ -126,7 +199,7 @@ export class FigureSprite {
   }
 
   private handlePointerOut(): void {
-    this.sprite.setScale(1);
+    this.sprite.setScale(REST_SCALE);
     this.tag.setText(this.figure.name);
   }
 

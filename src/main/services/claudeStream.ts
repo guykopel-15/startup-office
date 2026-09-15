@@ -1,3 +1,5 @@
+import { TOOL_NOTE_PREFIX } from '../../shared/agents';
+
 /** Pure parser for `claude --output-format stream-json` lines. */
 export interface StreamText {
   kind: 'text';
@@ -20,7 +22,6 @@ export interface StreamResult {
 
 export type StreamItem = StreamText | StreamToolUse | StreamResult;
 
-const TOOL_NOTE_PREFIX = '▸';
 const TOOL_INPUT_KEYS: readonly string[] = ['file_path', 'pattern', 'path', 'command', 'query'];
 const MAX_TOOL_INPUT_LENGTH = 80;
 
