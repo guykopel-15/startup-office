@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 
+import { levelForExperience } from '@shared/experience';
+import { findFigure } from '@shared/figures';
 import { FloorSetupStep } from '@shared/floors';
 import { nextId } from '@shared/ids';
 import { IDLE_REPO_STATUS } from '@shared/repo';
@@ -33,6 +35,8 @@ export interface FloorsState {
   addFigure: (input: NewFigureInput) => Figure | null;
   setFigureState: (floorId: string, figureId: string, state: FigureState) => void;
   setRolePrompt: (floorId: string, figureId: string, rolePrompt: string) => void;
+  /** Adds (or removes) XP; XP never drops below zero and a level, once reached, is kept. Returns the figure's new level, or null when it is not on the floor. */
+  awardExperience: (floorId: string, figureId: string, points: number) => { level: number } | null;
 }
 
 export const INITIAL_SETUP: FloorSetupProgress = { step: FloorSetupStep.PreparingRepo, fraction: 0, label: 'Preparing the repository', error: null };
@@ -40,6 +44,13 @@ const FLOOR_ID_PREFIX = 'floor-';
 
 function patchFloor(floors: readonly Floor[], floorId: string, patch: (floor: Floor) => Floor): Floor[] {
   return floors.map((floor: Floor): Floor => (floor.id === floorId ? patch(floor) : floor));
+}
+
+function applyExperience(points: number): (figure: Figure) => Figure {
+  return (figure: Figure): Figure => {
+    const experiencePoints = Math.max(0, figure.experiencePoints + points);
+    return { ...figure, experiencePoints, level: Math.max(figure.level, levelForExperience(experiencePoints)) };
+  };
 }
 
 function patchFigure(floors: readonly Floor[], floorId: string, figureId: string, patch: (figure: Figure) => Figure): Floor[] {
@@ -100,5 +111,10 @@ export const useFloorsStore = create<FloorsState>((set: StoreApi<FloorsState>['s
   },
   setRolePrompt: (floorId: string, figureId: string, rolePrompt: string): void => {
     set({ floors: patchFigure(get().floors, floorId, figureId, (figure: Figure): Figure => ({ ...figure, rolePrompt })) });
+  },
+  awardExperience: (floorId: string, figureId: string, points: number): { level: number } | null => {
+    set({ floors: patchFigure(get().floors, floorId, figureId, applyExperience(points)) });
+    const figure = findFigure(selectFloor(get(), floorId)?.figures ?? [], figureId);
+    return figure === null ? null : { level: figure.level };
   },
 }));

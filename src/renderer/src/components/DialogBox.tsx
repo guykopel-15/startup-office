@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 
+import { progressForExperience } from '@shared/experience';
 import { MAX_TASK_LENGTH } from '@shared/tasks';
 import { isBlank } from '@shared/text';
 import { CLOSE_ICON, DSButton, DSButtonVariant, DSField, DSInput, ENTER_KEY, ESCAPE_KEY, submitOnEnter } from '../designKit';
@@ -26,6 +27,11 @@ const TASK_PLACEHOLDER = 'e.g. Find the slowest query and explain it';
 const SEND_LABEL = 'Send';
 const BACK_LABEL = 'Back';
 const TASK_FIELD_ID = 'dialog-task';
+const LEVEL_PREFIX = 'Lv';
+const XP_SEPARATOR = ' · ';
+const XP_OF = ' / ';
+const XP_SUFFIX = ' XP';
+const TOP_LEVEL_TEXT = 'max';
 
 function Choices({ dialog }: DialogBoxProps): React.JSX.Element {
   return (
@@ -55,6 +61,13 @@ function TaskForm({ dialog }: DialogBoxProps): React.JSX.Element {
       </div>
     </div>
   );
+}
+
+/** "Lv2 · 150 / 200 XP", the figure's standing. */
+function levelLabel(experiencePoints: number): string {
+  const progress = progressForExperience(experiencePoints);
+  const bar = progress.needed === 0 ? TOP_LEVEL_TEXT : `${progress.earned}${XP_OF}${progress.needed}${XP_SUFFIX}`;
+  return `${LEVEL_PREFIX}${progress.level}${XP_SEPARATOR}${bar}`;
 }
 
 /** Gives focus back to whatever had it before the box opened (the game canvas, usually). */
@@ -90,6 +103,7 @@ export function DialogBox({ dialog }: DialogBoxProps): React.JSX.Element | null 
         <header className="dialog-box__header">
           <span className="dialog-box__name">{figure.name}</span>
           <span className="dialog-box__job">{figure.job}</span>
+          <span className="dialog-box__level">{levelLabel(figure.experiencePoints)}</span>
         </header>
         <p className="dialog-box__text">{typewriter.shown}</p>
         {dialog.mode === DialogMode.Talk ? <Choices dialog={dialog} /> : <TaskForm dialog={dialog} />}

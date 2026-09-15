@@ -10,6 +10,7 @@ import { SAMPLE_FIGURE, buildFillScript } from './fillAddFigure.mts';
 import { buildAgentRunScript } from './agentRun.mts';
 import { buildDialogBoxScript, buildHudChatScript } from './dialogAndChat.mts';
 import { buildFigureStatesScript } from './figureStates.mts';
+import { buildLevelUpScript } from './levelUp.mts';
 import { buildSprintBoardScript, buildSprintMeetingScript } from './sprint.mts';
 import { SAMPLE_FLOORS, buildFloorsReadyScript, buildNewFloorProgressScript } from './newFloor.mts';
 
@@ -24,6 +25,7 @@ const DIALOG_BOX_FILE = 'dialogBox.js';
 const HUD_CHAT_FILE = 'hudChat.js';
 const SPRINT_MEETING_FILE = 'sprintMeeting.js';
 const SPRINT_BOARD_FILE = 'sprintBoard.js';
+const LEVEL_UP_FILE = 'levelUp.js';
 const DIALOG_BOX_HOLD_MS = 20 * 1000;
 const DEFAULT_FIGURE_STATES_HOLD_MS = 45 * 1000;
 const HOLD_ARGUMENT = '--hold-ms=';
@@ -48,4 +50,5 @@ writeFileSync(join(OUTPUT_DIRECTORY, DIALOG_BOX_FILE), buildDialogBoxScript(DIAL
 writeFileSync(join(OUTPUT_DIRECTORY, HUD_CHAT_FILE), buildHudChatScript());
 writeFileSync(join(OUTPUT_DIRECTORY, SPRINT_MEETING_FILE), buildSprintMeetingScript());
 writeFileSync(join(OUTPUT_DIRECTORY, SPRINT_BOARD_FILE), buildSprintBoardScript());
-process.stdout.write(`wrote ${[DIALOG_FILE, SEATED_FILE, FLOOR_PROGRESS_FILE, FLOORS_READY_FILE, AGENT_RUN_FILE, FIGURE_STATES_FILE, DIALOG_BOX_FILE, HUD_CHAT_FILE, SPRINT_MEETING_FILE, SPRINT_BOARD_FILE].join(', ')} to ${OUTPUT_DIRECTORY}\n`);
+writeFileSync(join(OUTPUT_DIRECTORY, LEVEL_UP_FILE), buildLevelUpScript());
+process.stdout.write(`wrote ${[DIALOG_FILE, SEATED_FILE, FLOOR_PROGRESS_FILE, FLOORS_READY_FILE, AGENT_RUN_FILE, FIGURE_STATES_FILE, DIALOG_BOX_FILE, HUD_CHAT_FILE, SPRINT_MEETING_FILE, SPRINT_BOARD_FILE, LEVEL_UP_FILE].join(', ')} to ${OUTPUT_DIRECTORY}\n`);

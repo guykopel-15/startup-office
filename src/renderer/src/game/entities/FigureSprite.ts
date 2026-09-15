@@ -41,6 +41,8 @@ const BADGE_DEPTH_BONUS = 0.6;
 /** Speech is UI: it sits above every wall and figure, ordered among bubbles by the figure's depth. */
 const BUBBLE_DEPTH_BASE = DEPTH_RIM + 1;
 const TAG_SEPARATOR = ' · ';
+const LEVEL_PREFIX = ' Lv';
+const FIRST_LEVEL = 1;
 
 /** A figure in the office: sprite, name tag, status badge, speech bubble, idle bob, blink, typing, walking, hover, click. */
 export class FigureSprite {
@@ -60,6 +62,7 @@ export class FigureSprite {
   private bubbleRestY: number;
   private bobOffset = 0;
   private state: FigureState | null = null;
+  private level = FIRST_LEVEL;
   private bobTween: Phaser.Tweens.Tween | null = null;
   private blinkTimer: Phaser.Time.TimerEvent | null = null;
 
@@ -93,6 +96,22 @@ export class FigureSprite {
 
   get isWalking(): boolean {
     return this.walker.isWalking;
+  }
+
+  /** Screen y just above the head, where floating numbers start. */
+  get headY(): number {
+    return this.restY - this.sprite.height - TAG_GAP;
+  }
+
+  /** Level 1 stays unlabelled; from level 2 the tag reads "Maya Lv2". */
+  setLevel(level: number): void {
+    if (level === this.level) return;
+    this.level = level;
+    this.tag.setText(this.tagLabel());
+  }
+
+  private tagLabel(): string {
+    return this.level > FIRST_LEVEL ? `${this.figure.name}${LEVEL_PREFIX}${this.level}` : this.figure.name;
   }
 
   /** Switches badge and pose; the typing frames cycle only while working at the desk. Same state twice is a no-op. */
@@ -246,12 +265,12 @@ export class FigureSprite {
 
   private handlePointerOver(): void {
     this.sprite.setScale(HOVER_SCALE);
-    this.tag.setText(`${this.figure.name}${TAG_SEPARATOR}${this.figure.job}`);
+    this.tag.setText(`${this.tagLabel()}${TAG_SEPARATOR}${this.figure.job}`);
   }
 
   private handlePointerOut(): void {
     this.sprite.setScale(REST_SCALE);
-    this.tag.setText(this.figure.name);
+    this.tag.setText(this.tagLabel());
   }
 
   /** A release counts as a click only when the pointer did not travel far since it went down. */

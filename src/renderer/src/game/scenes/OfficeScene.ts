@@ -7,7 +7,9 @@ import { FigureDirector } from '../entities/FigureDirector';
 import { FigureSprite } from '../entities/FigureSprite';
 import { nextBubbleText } from '../entities/bubbleText';
 import { burstConfetti } from '../entities/confetti';
+import { showHit, showLevelUp, showReward } from '../entities/juice';
 import { GameEvent, gameEvents } from '../events';
+import { playCheer, playHit, playLevelUp } from '../sound';
 import { SLAB_DEPTH, drawFloors } from '../world/drawFloors';
 import { drawFurniture } from '../world/drawFurniture';
 import { drawWalls } from '../world/drawWalls';
@@ -24,7 +26,7 @@ import { useSprintsStore } from '../../store/sprintsStore';
 import type { AgentRun } from '@shared/agents';
 import type { Figure } from '@shared/figures';
 import type { Sprint } from '@shared/sprints';
-import type { FigureSaysPayload, SprintClosedPayload } from '../events';
+import type { FigureHitPayload, FigureLeveledUpPayload, FigureRewardedPayload, FigureSaysPayload, SprintClosedPayload } from '../events';
 import type { Furniture } from '../world/furniture';
 import type { ScreenBounds, ScreenPoint } from '../world/isoProjection';
 import type { FloorsState } from '../../store/floorsStore';
@@ -74,6 +76,9 @@ export class OfficeScene extends Phaser.Scene {
     this.unsubscribeRuns = useRunsStore.subscribe(this.handleRunsChange);
     gameEvents.on(GameEvent.FigureSays, this.handleFigureSays, this);
     gameEvents.on(GameEvent.SprintClosed, this.handleSprintClosed, this);
+    gameEvents.on(GameEvent.FigureRewarded, this.handleFigureRewarded, this);
+    gameEvents.on(GameEvent.FigureHit, this.handleFigureHit, this);
+    gameEvents.on(GameEvent.FigureLeveledUp, this.handleFigureLeveledUp, this);
     this.officeCamera = new OfficeCamera(this, getOfficeBounds(this.origin));
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.handleShutdown, this);
     this.events.once(Phaser.Scenes.Events.DESTROY, this.handleShutdown, this);
@@ -90,7 +95,10 @@ export class OfficeScene extends Phaser.Scene {
       this.figureSprites.delete(id);
     });
     figures.filter((figure: Figure): boolean => !this.figureSprites.has(figure.id)).forEach((figure: Figure): void => this.seatFigure(figure));
-    figures.forEach((figure: Figure): void => this.director?.setState(figure.id, figure.state));
+    figures.forEach((figure: Figure): void => {
+      this.director?.setState(figure.id, figure.state);
+      this.figureSprites.get(figure.id)?.setLevel(figure.level);
+    });
     if (state.activeFloorId !== this.shownFloorId) this.enterFloor(state.activeFloorId);
   }
 
@@ -149,6 +157,33 @@ export class OfficeScene extends Phaser.Scene {
   private handleSprintClosed(payload: SprintClosedPayload): void {
     if (payload.floorId !== this.shownFloorId) return;
     burstConfetti(this, WORLD_WIDTH * HALF, WORLD_HEIGHT * CONFETTI_Y_RATIO);
+    playCheer();
+  }
+
+  /** The sprite of a figure on the shown floor, or null when the event is about another floor. */
+  private spriteFor(payload: { floorId: string; figureId: string }): FigureSprite | null {
+    if (payload.floorId !== this.shownFloorId) return null;
+    return this.figureSprites.get(payload.figureId) ?? null;
+  }
+
+  private handleFigureRewarded(payload: FigureRewardedPayload): void {
+    const sprite = this.spriteFor(payload);
+    if (sprite !== null) showReward(this, sprite.sprite.x, sprite.headY, payload.points);
+  }
+
+  private handleFigureHit(payload: FigureHitPayload): void {
+    const sprite = this.spriteFor(payload);
+    if (sprite === null) return;
+    showHit(this, sprite.sprite, sprite.sprite.x, sprite.headY, payload.amount);
+    playHit();
+  }
+
+  private handleFigureLeveledUp(payload: FigureLeveledUpPayload): void {
+    const sprite = this.spriteFor(payload);
+    if (sprite === null) return;
+    sprite.setLevel(payload.level);
+    showLevelUp(this, sprite.sprite.x, sprite.headY);
+    playLevelUp();
   }
 
   private handleShutdown(): void {
@@ -158,6 +193,9 @@ export class OfficeScene extends Phaser.Scene {
     this.unsubscribeRuns = null;
     gameEvents.off(GameEvent.FigureSays, this.handleFigureSays, this);
     gameEvents.off(GameEvent.SprintClosed, this.handleSprintClosed, this);
+    gameEvents.off(GameEvent.FigureRewarded, this.handleFigureRewarded, this);
+    gameEvents.off(GameEvent.FigureHit, this.handleFigureHit, this);
+    gameEvents.off(GameEvent.FigureLeveledUp, this.handleFigureLeveledUp, this);
     this.director?.destroy();
     this.director = null;
     this.officeCamera?.destroy();
